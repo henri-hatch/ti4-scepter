@@ -16,3 +16,6 @@ Scepter is a tool designed to assist players of Twilight Imperium 4th Edition in
 4. **Joining a Game**: Use the "Join Game" button to connect to an existing game session from an external device such as your phone or laptop.
 5. **Managing your Player State**: Use the different tabs to manage your player state, including your faction, objectives, strategy cards, and more.
 6. **View the Game**: Host the game on a TV or large screen to allow all players to see the entire game state.
+
+## Technical Details
+Scepter is built using React Typescript and Flask Python for the backend. It is designed to be lightweight and run as a web application, allowing a host machine to run the host view on a large screen while players can connect from their own devices.
