@@ -9,7 +9,7 @@ function HomePage() {
   }
 
   const handleJoinGame = () => {
-    navigate('/join')
+    navigate('/player')
   }
 
   const handleSettings = () => {
