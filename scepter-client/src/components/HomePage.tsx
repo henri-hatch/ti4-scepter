@@ -1,11 +1,14 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import HostGameModal from './HostGameModal'
 import '../styles/HomePage.css'
 
 function HomePage() {
   const navigate = useNavigate()
+  const [isHostModalOpen, setIsHostModalOpen] = useState(false)
 
   const handleHostGame = () => {
-    navigate('/host')
+    setIsHostModalOpen(true)
   }
 
   const handleJoinGame = () => {
@@ -15,7 +18,6 @@ function HomePage() {
   const handleSettings = () => {
     navigate('/settings')
   }
-
   return (
     <div className="home-page">
       <div className="backdrop" />
@@ -38,6 +40,11 @@ function HomePage() {
           </button>
         </div>
       </div>
+      
+      <HostGameModal 
+        isOpen={isHostModalOpen}
+        onClose={() => setIsHostModalOpen(false)}
+      />
     </div>
   )
 }
