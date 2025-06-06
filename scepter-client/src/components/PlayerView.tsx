@@ -16,31 +16,30 @@ function PlayerView() {
         <span />
         <span />
         <span />
-      </button>
-      <nav className={`side-menu ${open ? 'open' : ''}`}>
+      </button>      <nav className={`side-menu ${open ? 'open' : ''}`}>
         <ul>
           <li>
-            <Link className="nav-button" to="overview" onClick={() => setOpen(false)}>
+            <Link className="nav-button" to="/player/overview" replace onClick={() => setOpen(false)}>
               Overview
             </Link>
           </li>
           <li>
-            <Link className="nav-button" to="planets" onClick={() => setOpen(false)}>
+            <Link className="nav-button" to="/player/planets" replace onClick={() => setOpen(false)}>
               Planets
             </Link>
           </li>
           <li>
-            <Link className="nav-button" to="technology" onClick={() => setOpen(false)}>
+            <Link className="nav-button" to="/player/technology" replace onClick={() => setOpen(false)}>
               Technology
             </Link>
           </li>
           <li>
-            <Link className="nav-button" to="cards" onClick={() => setOpen(false)}>
+            <Link className="nav-button" to="/player/cards" replace onClick={() => setOpen(false)}>
               Card Inventory
             </Link>
           </li>
           <li>
-            <Link className="nav-button" to="objectives" onClick={() => setOpen(false)}>
+            <Link className="nav-button" to="/player/objectives" replace onClick={() => setOpen(false)}>
               Objectives
             </Link>
           </li>
