@@ -19,3 +19,5 @@ Scepter is a tool designed to assist players of Twilight Imperium 4th Edition in
 
 ## Technical Details
 Scepter is built using React Typescript and Flask Python for the backend. It is designed to be lightweight and run as a web application, allowing a host machine to run the host view on a large screen while players can connect from their own devices.
+
+[Backend README](scepter-server/README.md)
