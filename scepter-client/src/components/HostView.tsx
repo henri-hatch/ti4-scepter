@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { io, Socket } from 'socket.io-client'
 import '../styles/HostView.css'
@@ -28,24 +28,39 @@ function HostView() {
   // Get game name from location state (passed from HostGameModal)
   const gameNameFromState = location.state?.gameName
 
-  const addLog = (message: string, type: LogEntry['type'] = 'info') => {
+  const addLog = useCallback((message: string, type: LogEntry['type'] = 'info') => {
+    const timestamp = new Date().toLocaleTimeString()
     const logEntry: LogEntry = {
-      id: Date.now().toString(),
-      timestamp: new Date().toLocaleTimeString(),
+      id: `${timestamp}-${message}-${type}`, // More unique ID based on content
+      timestamp,
       message,
       type
     }
-    setLogs(prev => [logEntry, ...prev].slice(0, 50)) // Keep last 50 logs
-  }
+    
+    setLogs(prev => {
+      // Check if we already have this exact log entry to prevent duplicates
+      const isDuplicate = prev.some(log => 
+        log.message === message && 
+        log.type === type && 
+        Math.abs(new Date(`1970-01-01 ${log.timestamp}`).getTime() - new Date(`1970-01-01 ${timestamp}`).getTime()) < 1000
+      )
+      
+      if (isDuplicate) {
+        return prev
+      }
+      
+      return [logEntry, ...prev].slice(0, 50) // Keep last 50 logs
+    })
+  }, [])
 
   useEffect(() => {
     if (!gameNameFromState) {
       navigate('/')
       return
-    }
-
-    // Initialize socket connection
-    const newSocket = io()
+    }    // Initialize socket connection for hosting
+    const newSocket = io({
+      query: { type: 'host' }  // Mark this as a host connection
+    })
     setSocket(newSocket)
 
     // Socket event handlers
@@ -89,7 +104,7 @@ function HostView() {
     return () => {
       newSocket.close()
     }
-  }, [gameNameFromState, navigate])
+  }, [gameNameFromState, navigate, addLog])
 
   const handleStopHosting = () => {
     if (socket) {

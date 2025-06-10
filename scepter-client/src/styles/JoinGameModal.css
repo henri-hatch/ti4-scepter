@@ -20,7 +20,8 @@
   width: 100%;
   max-width: 700px;
   max-height: 90vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   color: #ffffff;
 }
@@ -62,6 +63,9 @@
 
 .modal-body {
   padding: 2rem;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .error-message {
@@ -258,6 +262,8 @@
   justify-content: flex-end;
   padding: 1.5rem 2rem;
   border-top: 1px solid #444;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
 }
 
 .action-button {

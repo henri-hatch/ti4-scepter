@@ -7,6 +7,7 @@ function PlayerView() {
   const location = useLocation()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+  const [showLeaveModal, setShowLeaveModal] = useState(false)
   const [socket, setSocket] = useState<Socket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [playerInfo, setPlayerInfo] = useState<{
@@ -23,12 +24,13 @@ function PlayerView() {
   const stateInfo = location.state as {
     gameName?: string
     playerId?: string
-    playerName?: string
-  } | null
-
+    playerName?: string  } | null
+  
   useEffect(() => {
-    // Initialize socket connection
-    const newSocket = io()
+    // Initialize socket connection for player
+    const newSocket = io({
+      query: { type: 'player' }  // Mark this as a player connection
+    })
     setSocket(newSocket)
 
     newSocket.on('connect', () => {
@@ -60,9 +62,9 @@ function PlayerView() {
       navigate('/')
     })
 
-    newSocket.on('session_ended', (data) => {
+    newSocket.on('session_ended', (data: any) => {
       console.log('Game session ended:', data.gameName)
-      alert(`Game session "${data.gameName}" has ended. The host has stopped hosting.`)
+      alert(data.message || `Game session "${data.gameName}" has ended. The host has stopped hosting.`)
       navigate('/')
     })
 
@@ -83,13 +85,19 @@ function PlayerView() {
     return () => {
       newSocket.close()
     }
-  }, [navigate, stateInfo])
-
+  }, [navigate]) // Remove stateInfo from dependencies to prevent re-running
   const handleLeaveGame = () => {
     if (socket && playerInfo.gameName) {
       socket.emit('leave_game')
     } else {
       navigate('/')
+    }
+    setShowLeaveModal(false)
+  }
+
+  const handleConnectionStatusClick = () => {
+    if (isConnected && playerInfo.gameName) {
+      setShowLeaveModal(true)
     }
   }
 
@@ -106,7 +114,11 @@ function PlayerView() {
         <span />
       </button>      <nav className={`side-menu ${open ? 'open' : ''}`}>
         <div className="player-status">
-          <div className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
+          <div 
+            className={`connection-status ${isConnected ? 'connected' : 'disconnected'} ${isConnected && playerInfo.gameName ? 'clickable' : ''}`}
+            onClick={handleConnectionStatusClick}
+            title={isConnected && playerInfo.gameName ? 'Click to leave session' : ''}
+          >
             <span className="status-dot"></span>
             {isConnected ? 'Connected' : 'Disconnected'}
           </div>
@@ -155,6 +167,31 @@ function PlayerView() {
       <div className="page-content">
         <Outlet />
       </div>
+
+      {/* Leave Session Modal */}
+      {showLeaveModal && (
+        <div className="modal-overlay" onClick={() => setShowLeaveModal(false)}>
+          <div className="leave-modal" onClick={e => e.stopPropagation()}>
+            <h3>Leave Game Session</h3>
+            <p>Are you sure you want to leave "{playerInfo.gameName}"?</p>
+            <p>You'll be disconnected from the current game session.</p>
+            <div className="modal-actions">
+              <button 
+                className="action-button secondary"
+                onClick={() => setShowLeaveModal(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="action-button primary"
+                onClick={handleLeaveGame}
+              >
+                Leave Session
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

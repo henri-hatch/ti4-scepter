@@ -179,28 +179,42 @@ def get_game_players(game_name):
 @socketio.on('connect')
 def handle_connect():
     """Handle client connection"""
-    logger.info(f"Client connected: {request.sid}")
+    # Get connection type from query parameters
+    connection_type = request.args.get('type', 'unknown')
+    logger.info(f"Client connected: {request.sid} (type: {connection_type})")
     emit('connected', {'sessionId': request.sid})
 
 @socketio.on('disconnect')
 def handle_disconnect():
     """Handle client disconnection"""
-    logger.info(f"Client disconnected: {request.sid}")
+    # Get connection type from query parameters 
+    connection_type = request.args.get('type', 'unknown')
+    logger.info(f"Client disconnected: {request.sid} (type: {connection_type})")
     
-    # Check if this was a player or host
-    removed_info = session_manager.remove_player_from_session(request.sid)
-    if removed_info:
-        # Notify other players in the game
-        socketio.emit('player_left', {
-            'playerName': removed_info['player_name'],
-            'playerId': removed_info['player_id']
-        }, room=removed_info['game_name'])
-    else:
-        # Check if this was a host
-        game_name = session_manager.stop_hosting_session(request.sid)
-        if game_name:
-            # Notify all clients that the game session has ended
-            socketio.emit('session_ended', {'gameName': game_name}, room=game_name)
+    # Check if this session ID exists in any game
+    if request.sid in session_manager.session_to_game:
+        game_name = session_manager.session_to_game[request.sid]
+        session = session_manager.active_sessions.get(game_name)
+        
+        if session and request.sid == session.host_session_id:
+            # This is the actual host session - end the game
+            game_name = session_manager.stop_hosting_session(request.sid)
+            if game_name:
+                logger.info(f"Host disconnected from game '{game_name}' - ending session")
+                socketio.emit('session_ended', {
+                    'gameName': game_name,
+                    'message': 'Host has left the game. Session ended.'
+                }, room=game_name)
+        else:
+            # This is a player session - remove just the player
+            removed_info = session_manager.remove_player_from_session(request.sid)
+            if removed_info:
+                logger.info(f"Player '{removed_info['player_name']}' disconnected from game '{removed_info['game_name']}'")
+                # Notify other players in the game that this player left
+                socketio.emit('player_left', {
+                    'playerName': removed_info['player_name'],
+                    'playerId': removed_info['player_id']
+                }, room=removed_info['game_name'])
 
 @socketio.on('host_game')
 def handle_host_game(data):
@@ -210,6 +224,8 @@ def handle_host_game(data):
         if not game_name:
             emit('error', {'message': 'Game name is required'})
             return
+        
+        logger.info(f"Hosting request for game: '{game_name}' from session: {request.sid}")
         
         # Build database path
         safe_game_name = "".join(c for c in game_name if c.isalnum() or c in (' ', '-', '_')).strip()
@@ -222,23 +238,24 @@ def handle_host_game(data):
             # Join the host to the game room
             join_room(game_name)
             
-            # Get game info
+            # Get players for this game
             players = session_manager.get_game_players(game_name)
-            local_ip = session_manager.get_local_ip()
             
+            # Notify the host that hosting started
             emit('hosting_started', {
                 'gameName': game_name,
-                'localIp': local_ip,
+                'localIp': session_manager.get_local_ip(),
                 'players': players
             })
             
-            logger.info(f"Game '{game_name}' is now being hosted by {request.sid}")
+            logger.info(f"Successfully started hosting '{game_name}' with {len(players)} players")
+            logger.debug(f"Current active sessions: {list(session_manager.active_sessions.keys())}")
         else:
-            emit('error', {'message': f'Failed to host game: {game_name}'})
+            emit('error', {'message': f'Failed to start hosting: {game_name}'})
             
     except Exception as e:
         logger.error(f"Error hosting game: {e}", exc_info=True)
-        emit('error', {'message': 'Failed to host game'})
+        emit('error', {'message': 'Failed to start hosting'})
 
 @socketio.on('join_game')
 def handle_join_game(data):
@@ -247,6 +264,9 @@ def handle_join_game(data):
         game_name = data.get('gameName')
         player_id = data.get('playerId')
         player_name = data.get('playerName')
+        
+        logger.info(f"Join request - Game: '{game_name}', Player: '{player_name}', Session: {request.sid}")
+        logger.debug(f"Current active sessions: {list(session_manager.active_sessions.keys())}")
         
         if not all([game_name, player_id, player_name]):
             emit('error', {'message': 'Game name, player ID, and player name are required'})
@@ -274,7 +294,14 @@ def handle_join_game(data):
             
             logger.info(f"Player '{player_name}' joined game '{game_name}'")
         else:
-            emit('error', {'message': f'Failed to join game: {game_name}'})
+            # Check if the game exists but isn't being hosted
+            active_games = session_manager.get_active_games()
+            active_game_names = [game['name'] for game in active_games]
+            
+            if game_name not in active_game_names:
+                emit('error', {'message': f'Game "{game_name}" is not currently being hosted. Ask the host to start hosting the game first.'})
+            else:
+                emit('error', {'message': f'Failed to join game "{game_name}". You may already be connected or the session is full.'})
             
     except Exception as e:
         logger.error(f"Error joining game: {e}", exc_info=True)

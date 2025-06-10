@@ -34,10 +34,10 @@ class GameSession:
 
 class SessionManager:
     """Manages active game sessions and player connections"""
-    
     def __init__(self):
         self.active_sessions: Dict[str, GameSession] = {}  # game_name -> GameSession
         self.session_to_game: Dict[str, str] = {}  # session_id -> game_name
+        self.player_to_game: Dict[str, str] = {}  # player_session_id -> game_name
         
     def get_local_ip(self) -> str:
         """Get the local IP address of the host machine"""
@@ -93,7 +93,6 @@ class SessionManager:
         except Exception as e:
             logger.error(f"Error starting hosting session for '{game_name}': {e}")
             return False
-    
     def stop_hosting_session(self, host_session_id: str) -> Optional[str]:
         """
         Stop hosting a game session
@@ -109,6 +108,15 @@ class SessionManager:
             if not game_name:
                 return None
             
+            # Get the session before removing it
+            session = self.active_sessions.get(game_name)
+            
+            # Clean up all connected players for this game
+            if session:
+                for player_session_id in list(session.connected_players.keys()):
+                    if player_session_id in self.player_to_game:
+                        del self.player_to_game[player_session_id]
+            
             # Remove session
             if game_name in self.active_sessions:
                 del self.active_sessions[game_name]
@@ -116,7 +124,7 @@ class SessionManager:
             if host_session_id in self.session_to_game:
                 del self.session_to_game[host_session_id]
             
-            logger.info(f"Stopped hosting session for game '{game_name}'")
+            logger.info(f"Stopped hosting session for game '{game_name}' and cleaned up {len(session.connected_players) if session else 0} connected players")
             return game_name
             
         except Exception as e:
@@ -188,7 +196,6 @@ class SessionManager:
         except Exception as e:
             logger.error(f"Error getting players for game '{game_name}': {e}")
             return []
-    
     def join_player_to_session(self, game_name: str, player_id: str, player_name: str, session_id: str) -> bool:
         """
         Add a player to a game session
@@ -203,9 +210,12 @@ class SessionManager:
             True if player joined successfully, False otherwise
         """
         try:
+            logger.debug(f"Attempting to join player '{player_name}' to game '{game_name}'")
+            logger.debug(f"Available active sessions: {list(self.active_sessions.keys())}")
+            
             session = self.active_sessions.get(game_name)
             if not session:
-                logger.error(f"Game session '{game_name}' not found")
+                logger.error(f"Game session '{game_name}' not found in active sessions")
                 return False
             
             # Check if player is already connected
@@ -221,12 +231,12 @@ class SessionManager:
                 player_name=player_name,
                 joined_at=datetime.now()
             )
-            
             session.connected_players[session_id] = connection
             session.last_activity = datetime.now()
             self.session_to_game[session_id] = game_name
+            self.player_to_game[session_id] = game_name
             
-            logger.info(f"Player '{player_name}' joined game '{game_name}'")
+            logger.info(f"Player '{player_name}' successfully joined game '{game_name}'")
             return True
             
         except Exception as e:
@@ -251,10 +261,12 @@ class SessionManager:
             session = self.active_sessions.get(game_name)
             if not session or session_id not in session.connected_players:
                 return None
-            
-            # Remove player
+              # Remove player
             connection = session.connected_players.pop(session_id)
-            del self.session_to_game[session_id]
+            if session_id in self.session_to_game:
+                del self.session_to_game[session_id]
+            if session_id in self.player_to_game:
+                del self.player_to_game[session_id]
             session.last_activity = datetime.now()
             
             logger.info(f"Player '{connection.player_name}' left game '{game_name}'")
@@ -311,7 +323,6 @@ class SessionManager:
         except Exception as e:
             logger.error(f"Error getting session info: {e}")
             return None
-    
     def cleanup_disconnected_sessions(self, connected_session_ids: Set[str]):
         """
         Remove sessions that are no longer connected

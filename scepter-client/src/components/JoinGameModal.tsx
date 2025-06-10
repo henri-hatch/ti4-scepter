@@ -32,11 +32,12 @@ function JoinGameModal({ isOpen, onClose }: JoinGameModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string>('')
   const [step, setStep] = useState<'select-game' | 'select-player'>('select-game')
-
   useEffect(() => {
     if (isOpen) {
-      // Initialize socket connection
-      const newSocket = io()
+      // Initialize socket connection for joining
+      const newSocket = io({
+        query: { type: 'player' }  // Mark this as a player connection
+      })
       setSocket(newSocket)
 
       // Fetch active games
@@ -54,13 +55,18 @@ function JoinGameModal({ isOpen, onClose }: JoinGameModalProps) {
             gameName: data.gameName,
             playerId: data.playerId,
             playerName: data.playerName
-          }
-        })
+          }        })
       })
 
       newSocket.on('error', (data) => {
+        console.error('Socket error:', data.message)
         setError(data.message)
         setIsLoading(false)
+        
+        // If joining failed, close modal and return to home after showing error for 3 seconds
+        setTimeout(() => {
+          handleClose()
+        }, 3000)
       })
 
       return () => {
