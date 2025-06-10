@@ -1,18 +1,20 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HostGameModal from './HostGameModal'
+import JoinGameModal from './JoinGameModal'
 import '../styles/HomePage.css'
 
 function HomePage() {
   const navigate = useNavigate()
   const [isHostModalOpen, setIsHostModalOpen] = useState(false)
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false)
 
   const handleHostGame = () => {
     setIsHostModalOpen(true)
   }
 
   const handleJoinGame = () => {
-    navigate('/player')
+    setIsJoinModalOpen(true)
   }
 
   const handleSettings = () => {
@@ -39,11 +41,15 @@ function HomePage() {
             Settings
           </button>
         </div>
-      </div>
-      
+      </div>      
       <HostGameModal 
         isOpen={isHostModalOpen}
         onClose={() => setIsHostModalOpen(false)}
+      />
+      
+      <JoinGameModal 
+        isOpen={isJoinModalOpen}
+        onClose={() => setIsJoinModalOpen(false)}
       />
     </div>
   )

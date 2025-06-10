@@ -88,14 +88,13 @@ function HostGameModal({ isOpen, onClose }: HostGameModalProps) {
         body: JSON.stringify({
           gameName: gameName.trim(),
           players: validPlayers.map(player => ({ name: player.name.trim() }))
-        })
-      })
+        })      })
 
       const data = await response.json()
 
       if (response.ok) {
         onClose()
-        navigate('/host')
+        navigate('/host', { state: { gameName: gameName.trim() } })
       } else {
         alert(data.error || 'Failed to create game')
       }
@@ -106,16 +105,14 @@ function HostGameModal({ isOpen, onClose }: HostGameModalProps) {
       setIsLoading(false)
     }
   }
-
   const handleResumeGame = () => {
     if (!selectedGame) {
       alert('Please select a game to resume')
       return
     }
     
-    // TODO: Implement resume game logic
     onClose()
-    navigate('/host')
+    navigate('/host', { state: { gameName: selectedGame } })
   }
 
   const formatDate = (dateString: string) => {

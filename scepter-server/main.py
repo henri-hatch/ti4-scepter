@@ -2,8 +2,10 @@ import os
 import logging
 import sys
 from flask import Flask, send_from_directory, request, jsonify
+from flask_socketio import SocketIO, emit, join_room, leave_room, disconnect
 
 from routes.games import create_game_file, list_games
+from components.session_manager import session_manager
 from config import get_config
 
 # Get configuration
@@ -16,8 +18,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize Flask app
+# Initialize Flask app and SocketIO
 app = Flask(__name__, static_folder=config.STATIC_FOLDER, static_url_path=config.STATIC_URL_PATH)
+socketio = SocketIO(app, cors_allowed_origins="*", logger=False, engineio_logger=False)
 
 # Configuration
 GAMES_DIR = config.GAMES_DIR
@@ -151,6 +154,171 @@ def health_check():
         "games_directory_exists": os.path.exists(GAMES_DIR)
     }), 200
 
+@app.route('/api/active-games', methods=['GET'])
+def get_active_games():
+    """API endpoint to get currently active (hosted) games"""
+    try:
+        active_games = session_manager.get_active_games()
+        logger.info(f"Found {len(active_games)} active games")
+        return jsonify({"games": active_games}), 200
+    except Exception as e:
+        logger.error(f"Error getting active games: {e}", exc_info=True)
+        return jsonify({"error": "Failed to get active games"}), 500
+
+@app.route('/api/game/<game_name>/players', methods=['GET'])
+def get_game_players(game_name):
+    """API endpoint to get players for a specific game"""
+    try:
+        players = session_manager.get_game_players(game_name)
+        return jsonify({"players": players}), 200
+    except Exception as e:
+        logger.error(f"Error getting players for game '{game_name}': {e}", exc_info=True)
+        return jsonify({"error": "Failed to get game players"}), 500
+
+# WebSocket event handlers
+@socketio.on('connect')
+def handle_connect():
+    """Handle client connection"""
+    logger.info(f"Client connected: {request.sid}")
+    emit('connected', {'sessionId': request.sid})
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    """Handle client disconnection"""
+    logger.info(f"Client disconnected: {request.sid}")
+    
+    # Check if this was a player or host
+    removed_info = session_manager.remove_player_from_session(request.sid)
+    if removed_info:
+        # Notify other players in the game
+        socketio.emit('player_left', {
+            'playerName': removed_info['player_name'],
+            'playerId': removed_info['player_id']
+        }, room=removed_info['game_name'])
+    else:
+        # Check if this was a host
+        game_name = session_manager.stop_hosting_session(request.sid)
+        if game_name:
+            # Notify all clients that the game session has ended
+            socketio.emit('session_ended', {'gameName': game_name}, room=game_name)
+
+@socketio.on('host_game')
+def handle_host_game(data):
+    """Handle game hosting request"""
+    try:
+        game_name = data.get('gameName')
+        if not game_name:
+            emit('error', {'message': 'Game name is required'})
+            return
+        
+        # Build database path
+        safe_game_name = "".join(c for c in game_name if c.isalnum() or c in (' ', '-', '_')).strip()
+        db_path = os.path.join(GAMES_DIR, f"{safe_game_name}.sqlite3")
+        
+        # Start hosting session
+        success = session_manager.start_hosting_session(game_name, db_path, request.sid)
+        
+        if success:
+            # Join the host to the game room
+            join_room(game_name)
+            
+            # Get game info
+            players = session_manager.get_game_players(game_name)
+            local_ip = session_manager.get_local_ip()
+            
+            emit('hosting_started', {
+                'gameName': game_name,
+                'localIp': local_ip,
+                'players': players
+            })
+            
+            logger.info(f"Game '{game_name}' is now being hosted by {request.sid}")
+        else:
+            emit('error', {'message': f'Failed to host game: {game_name}'})
+            
+    except Exception as e:
+        logger.error(f"Error hosting game: {e}", exc_info=True)
+        emit('error', {'message': 'Failed to host game'})
+
+@socketio.on('join_game')
+def handle_join_game(data):
+    """Handle player joining game request"""
+    try:
+        game_name = data.get('gameName')
+        player_id = data.get('playerId')
+        player_name = data.get('playerName')
+        
+        if not all([game_name, player_id, player_name]):
+            emit('error', {'message': 'Game name, player ID, and player name are required'})
+            return
+        
+        # Join player to session
+        success = session_manager.join_player_to_session(game_name, player_id, player_name, request.sid)
+        
+        if success:
+            # Join the player to the game room
+            join_room(game_name)
+            
+            # Notify the player they joined successfully
+            emit('joined_game', {
+                'gameName': game_name,
+                'playerId': player_id,
+                'playerName': player_name
+            })
+            
+            # Notify others in the game about the new player
+            emit('player_joined', {
+                'playerId': player_id,
+                'playerName': player_name
+            }, room=game_name, include_self=False)
+            
+            logger.info(f"Player '{player_name}' joined game '{game_name}'")
+        else:
+            emit('error', {'message': f'Failed to join game: {game_name}'})
+            
+    except Exception as e:
+        logger.error(f"Error joining game: {e}", exc_info=True)
+        emit('error', {'message': 'Failed to join game'})
+
+@socketio.on('leave_game')
+def handle_leave_game():
+    """Handle player leaving game request"""
+    try:
+        removed_info = session_manager.remove_player_from_session(request.sid)
+        if removed_info:
+            # Leave the game room
+            leave_room(removed_info['game_name'])
+            
+            # Notify the player they left
+            emit('left_game', {'gameName': removed_info['game_name']})
+            
+            # Notify others in the game
+            emit('player_left', {
+                'playerId': removed_info['player_id'],
+                'playerName': removed_info['player_name']
+            }, room=removed_info['game_name'])
+            
+            logger.info(f"Player '{removed_info['player_name']}' left game '{removed_info['game_name']}'")
+        else:
+            emit('error', {'message': 'Not currently in a game'})
+            
+    except Exception as e:
+        logger.error(f"Error leaving game: {e}", exc_info=True)
+        emit('error', {'message': 'Failed to leave game'})
+
+@socketio.on('get_session_info')
+def handle_get_session_info():
+    """Handle request for current session information"""
+    try:
+        session_info = session_manager.get_session_info(request.sid)
+        if session_info:
+            emit('session_info', session_info)
+        else:
+            emit('session_info', {'game_name': None, 'is_host': False, 'player_info': None})
+    except Exception as e:
+        logger.error(f"Error getting session info: {e}", exc_info=True)
+        emit('error', {'message': 'Failed to get session info'})
+
 @app.route('/')
 def home():
     """Serve the main application"""
@@ -191,9 +359,10 @@ def main():
     try:
         # Ensure required directories exist
         ensure_games_directory()
-          # Start the application
-        logger.info("Starting Scepter Server...")
-        app.run(debug=config.DEBUG, host=config.HOST, port=config.PORT)
+        
+        # Start the application with SocketIO
+        logger.info("Starting Scepter Server with WebSocket support...")
+        socketio.run(app, debug=config.DEBUG, host=config.HOST, port=config.PORT, allow_unsafe_werkzeug=True)
         
     except Exception as e:
         logger.error(f"Failed to start application: {e}", exc_info=True)
