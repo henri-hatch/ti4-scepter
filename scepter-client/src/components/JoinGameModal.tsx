@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { io, Socket } from 'socket.io-client'
+import { useSocket } from '../contexts/SocketContext'
 import '../styles/JoinGameModal.css'
 
 interface ActiveGame {
@@ -24,7 +24,7 @@ interface JoinGameModalProps {
 
 function JoinGameModal({ isOpen, onClose }: JoinGameModalProps) {
   const navigate = useNavigate()
-  const [socket, setSocket] = useState<Socket | null>(null)
+  const { socket, connectionType, initializeSocket, joinGame } = useSocket()
   const [activeGames, setActiveGames] = useState<ActiveGame[]>([])
   const [selectedGame, setSelectedGame] = useState<string>('')
   const [availablePlayers, setAvailablePlayers] = useState<Player[]>([])
@@ -34,20 +34,21 @@ function JoinGameModal({ isOpen, onClose }: JoinGameModalProps) {
   const [step, setStep] = useState<'select-game' | 'select-player'>('select-game')
   useEffect(() => {
     if (isOpen) {
-      // Initialize socket connection for joining
-      const newSocket = io({
-        query: { type: 'player' }  // Mark this as a player connection
-      })
-      setSocket(newSocket)
+      // Initialize socket connection for joining only if not already connected as player
+      if (connectionType !== 'player') {
+        console.log('Initializing player socket for joining game')
+        initializeSocket('player')
+      }
 
       // Fetch active games
       fetchActiveGames()
+    }
+  }, [isOpen, connectionType, initializeSocket])
 
-      newSocket.on('connect', () => {
-        console.log('Connected to server for joining game')
-      })
-
-      newSocket.on('joined_game', (data) => {
+  useEffect(() => {
+    // Set up socket event listeners when socket is available
+    if (socket && isOpen) {
+      const handleJoinedGame = (data: any) => {
         console.log('Successfully joined game:', data)
         onClose()
         navigate('/player', { 
@@ -55,10 +56,11 @@ function JoinGameModal({ isOpen, onClose }: JoinGameModalProps) {
             gameName: data.gameName,
             playerId: data.playerId,
             playerName: data.playerName
-          }        })
-      })
+          }
+        })
+      }
 
-      newSocket.on('error', (data) => {
+      const handleError = (data: any) => {
         console.error('Socket error:', data.message)
         setError(data.message)
         setIsLoading(false)
@@ -67,13 +69,17 @@ function JoinGameModal({ isOpen, onClose }: JoinGameModalProps) {
         setTimeout(() => {
           handleClose()
         }, 3000)
-      })
+      }
+
+      socket.on('joined_game', handleJoinedGame)
+      socket.on('error', handleError)
 
       return () => {
-        newSocket.close()
+        socket.off('joined_game', handleJoinedGame)
+        socket.off('error', handleError)
       }
     }
-  }, [isOpen, navigate, onClose])
+  }, [socket, isOpen, navigate, onClose])
 
   const fetchActiveGames = async () => {
     try {
@@ -123,9 +129,8 @@ function JoinGameModal({ isOpen, onClose }: JoinGameModalProps) {
     }
     fetchGamePlayers(selectedGame)
   }
-
   const handleJoinGame = () => {
-    if (!selectedPlayer || !socket) {
+    if (!selectedPlayer) {
       setError('Please select a player')
       return
     }
@@ -137,11 +142,7 @@ function JoinGameModal({ isOpen, onClose }: JoinGameModalProps) {
     }
 
     setIsLoading(true)
-    socket.emit('join_game', {
-      gameName: selectedGame,
-      playerId: selectedPlayer,
-      playerName: selectedPlayerInfo.name
-    })
+    joinGame(selectedGame, selectedPlayer, selectedPlayerInfo.name)
   }
 
   const handleBack = () => {
@@ -151,11 +152,7 @@ function JoinGameModal({ isOpen, onClose }: JoinGameModalProps) {
       setAvailablePlayers([])
     }
   }
-
   const handleClose = () => {
-    if (socket) {
-      socket.close()
-    }
     setSelectedGame('')
     setSelectedPlayer('')
     setAvailablePlayers([])

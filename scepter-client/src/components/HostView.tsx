@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { io, Socket } from 'socket.io-client'
+import { useSocket } from '../contexts/SocketContext'
 import '../styles/HostView.css'
 
 interface Player {
@@ -18,7 +18,7 @@ interface LogEntry {
 function HostView() {
   const navigate = useNavigate()
   const location = useLocation()
-  const [socket, setSocket] = useState<Socket | null>(null)
+  const { socket, isConnected, connectionType, initializeSocket, hostGame, stopHosting } = useSocket()
   const [gameName, setGameName] = useState<string>('')
   const [localIp, setLocalIp] = useState<string>('')
   const [players, setPlayers] = useState<Player[]>([])
@@ -52,64 +52,79 @@ function HostView() {
       return [logEntry, ...prev].slice(0, 50) // Keep last 50 logs
     })
   }, [])
-
   useEffect(() => {
     if (!gameNameFromState) {
       navigate('/')
       return
-    }    // Initialize socket connection for hosting
-    const newSocket = io({
-      query: { type: 'host' }  // Mark this as a host connection
-    })
-    setSocket(newSocket)
-
-    // Socket event handlers
-    newSocket.on('connect', () => {
-      setIsConnecting(false)
-      addLog(`Connected to server (Session: ${newSocket.id})`, 'info')
-      
-      // Start hosting the game
-      newSocket.emit('host_game', { gameName: gameNameFromState })
-    })
-
-    newSocket.on('hosting_started', (data: any) => {
-      setGameName(data.gameName)
-      setLocalIp(data.localIp)
-      setPlayers(data.players || [])
-      addLog(`Started hosting game "${data.gameName}" on ${data.localIp}`, 'info')
-      addLog(`Game has ${data.players?.length || 0} registered players`, 'info')
-    })
-
-    newSocket.on('player_joined', (data: any) => {
-      addLog(`${data.playerName} joined the game`, 'join')
-    })
-
-    newSocket.on('player_left', (data: any) => {
-      addLog(`${data.playerName} left the game`, 'leave')
-    })
-
-    newSocket.on('error', (data: any) => {
-      addLog(`Error: ${data.message}`, 'error')
-    })
-
-    newSocket.on('disconnect', () => {
-      setIsConnecting(true)
-      addLog('Disconnected from server', 'error')
-    })
-
-    newSocket.on('connect_error', (error: any) => {
-      addLog(`Connection error: ${error.message}`, 'error')
-    })
-
-    return () => {
-      newSocket.close()
     }
-  }, [gameNameFromState, navigate, addLog])
+
+    // Initialize socket connection for hosting only if not already connected as host
+    if (connectionType !== 'host') {
+      console.log('Initializing host socket connection')
+      initializeSocket('host')
+    }
+  }, [gameNameFromState, navigate, connectionType, initializeSocket])
+
+  useEffect(() => {
+    // Set up socket event listeners and start hosting when socket is ready
+    if (socket && connectionType === 'host' && gameNameFromState) {
+      setIsConnecting(false)
+
+      const handleHostingStarted = (data: any) => {
+        setGameName(data.gameName)
+        setLocalIp(data.localIp)
+        setPlayers(data.players || [])
+        addLog(`Started hosting game "${data.gameName}" on ${data.localIp}`, 'info')
+        addLog(`Game has ${data.players?.length || 0} registered players`, 'info')
+      }
+
+      const handlePlayerJoined = (data: any) => {
+        addLog(`${data.playerName} joined the game`, 'join')
+      }
+
+      const handlePlayerLeft = (data: any) => {
+        addLog(`${data.playerName} left the game`, 'leave')
+      }
+
+      const handleError = (data: any) => {
+        addLog(`Error: ${data.message}`, 'error')
+      }
+
+      const handleDisconnect = () => {
+        setIsConnecting(true)
+        addLog('Disconnected from server', 'error')
+      }
+
+      const handleConnectError = (error: any) => {
+        addLog(`Connection error: ${error.message}`, 'error')
+      }
+
+      socket.on('hosting_started', handleHostingStarted)
+      socket.on('player_joined', handlePlayerJoined)
+      socket.on('player_left', handlePlayerLeft)
+      socket.on('error', handleError)
+      socket.on('disconnect', handleDisconnect)
+      socket.on('connect_error', handleConnectError)
+
+      // If connected, start hosting the game
+      if (isConnected) {
+        addLog(`Connected to server (Session: ${socket.id})`, 'info')
+        hostGame(gameNameFromState)
+      }
+
+      return () => {
+        socket.off('hosting_started', handleHostingStarted)
+        socket.off('player_joined', handlePlayerJoined)
+        socket.off('player_left', handlePlayerLeft)
+        socket.off('error', handleError)
+        socket.off('disconnect', handleDisconnect)
+        socket.off('connect_error', handleConnectError)
+      }
+    }
+  }, [socket, connectionType, gameNameFromState, addLog, hostGame, isConnected])
 
   const handleStopHosting = () => {
-    if (socket) {
-      socket.disconnect()
-    }
+    stopHosting()
     navigate('/')
   }
 
