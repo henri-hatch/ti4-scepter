@@ -1,54 +1,36 @@
-# React + TypeScript + Vite
+# Scepter Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The frontend client for Scepter. This document details any design choices or definites that should exist within the application.
 
-Currently, two official plugins are available:
+## Project Structure
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+```
+├── dist                     # Auto generated build directory
+├── eslint.config.js         # Linter config
+├── index.html
+├── package.json
+├── package-lock.json
+├── public
+│   └── scepter-icon.png     # Main logo
+├── README.md                # This file! Details design choices and user experience
+├── src                      # Main source directory
+│   ├── App.tsx              # Front end entry point and router
+│   ├── assets               # All front end assets
+│   ├── components           # Client pages to route to
+│   ├── contexts             # Primarily used for websocket context
+│   ├── index.css
+│   ├── main.tsx
+│   ├── styles               # All CSS goes here
+│   └── vite-env.d.ts
+├── tsconfig.app.json
+├── tsconfig.json
+├── tsconfig.node.json
+└── vite.config.ts
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## User Experience (UX)
+- Nice big buttons for a good desktop and mobile experience
+- Should be able to accomodate mobile devices as they are the main ingester of the client
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+## User Interface (UI)
+- Space themed (note background). Navy blues, greys, and yellows.

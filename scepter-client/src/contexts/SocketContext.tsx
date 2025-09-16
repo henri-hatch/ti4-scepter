@@ -46,6 +46,17 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     playerId: null,
     playerName: null
   })
+  const resetConnectionState = useCallback(() => {
+    setSocket(null)
+    setConnectionType(null)
+    setIsConnected(false)
+    setPlayerInfo({
+      gameName: null,
+      playerId: null,
+      playerName: null
+    })
+  }, [])
+
   const initializeSocket = useCallback((type: 'player' | 'host') => {
     // If we already have a socket of the same type that's connected, don't recreate
     if (socket && connectionType === type && socket.connected) {
@@ -164,20 +175,15 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     }
 
     socket.disconnect()
-  }, [socket, connectionType])
+    resetConnectionState()
+  }, [socket, connectionType, resetConnectionState])
   const disconnect = useCallback(() => {
     if (socket) {
       socket.disconnect()
-      setSocket(null)
-      setConnectionType(null)
-      setIsConnected(false)
-      setPlayerInfo({
-        gameName: null,
-        playerId: null,
-        playerName: null
-      })
     }
-  }, [socket])
+
+    resetConnectionState()
+  }, [socket, resetConnectionState])
   const onLeftGame = useCallback((callback: (data: any) => void) => {
     if (socket && connectionType === 'player') {
       socket.on('left_game', callback)

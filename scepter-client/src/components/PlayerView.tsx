@@ -7,7 +7,6 @@ function PlayerView() {
   const location = useLocation()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
-  const [showLeaveModal, setShowLeaveModal] = useState(false)
   const hasJoinedGame = useRef(false)
   
   const { 
@@ -78,13 +77,6 @@ function PlayerView() {
     }
     hasJoinedGame.current = false
     navigate('/')
-    setShowLeaveModal(false)
-  }
-
-  const handleConnectionStatusClick = () => {
-    if (isConnected && playerInfo.gameName) {
-      setShowLeaveModal(true)
-    }
   }
 
   return (
@@ -103,9 +95,7 @@ function PlayerView() {
       <nav className={`side-menu ${open ? 'open' : ''}`}>
         <div className="player-status">
           <div 
-            className={`connection-status ${isConnected ? 'connected' : 'disconnected'} ${isConnected && playerInfo.gameName ? 'clickable' : ''}`}
-            onClick={handleConnectionStatusClick}
-            title={isConnected && playerInfo.gameName ? 'Click to leave session' : ''}
+            className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}
           >
             <span className="status-dot"></span>
             {isConnected ? 'Connected' : 'Disconnected'}
@@ -155,31 +145,6 @@ function PlayerView() {
       <div className="page-content">
         <Outlet />
       </div>
-
-      {/* Leave Session Modal */}
-      {showLeaveModal && (
-        <div className="modal-overlay" onClick={() => setShowLeaveModal(false)}>
-          <div className="leave-modal" onClick={e => e.stopPropagation()}>
-            <h3>Leave Game Session</h3>
-            <p>Are you sure you want to leave "{playerInfo.gameName}"?</p>
-            <p>You'll be disconnected from the current game session.</p>
-            <div className="modal-actions">
-              <button 
-                className="action-button secondary"
-                onClick={() => setShowLeaveModal(false)}
-              >
-                Cancel
-              </button>
-              <button 
-                className="action-button primary"
-                onClick={handleLeaveGame}
-              >
-                Leave Session
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
