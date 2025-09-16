@@ -1,12 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { useSocket } from '../contexts/SocketContext'
+import { useSocket } from '../contexts/useSocket'
+import type { HostingStartedPayload, PlayerEventPayload, SocketErrorPayload } from '../contexts/socketTypes'
 import '../styles/HostView.css'
 
-interface Player {
-  playerId: string
-  name: string
-}
+type Player = HostingStartedPayload['players'][number]
 
 interface LogEntry {
   id: string
@@ -70,23 +68,23 @@ function HostView() {
     if (socket && connectionType === 'host' && gameNameFromState) {
       setIsConnecting(false)
 
-      const handleHostingStarted = (data: any) => {
+      const handleHostingStarted = (data: HostingStartedPayload) => {
         setGameName(data.gameName)
         setLocalIp(data.localIp)
-        setPlayers(data.players || [])
+        setPlayers(data.players ?? [])
         addLog(`Started hosting game "${data.gameName}" on ${data.localIp}`, 'info')
         addLog(`Game has ${data.players?.length || 0} registered players`, 'info')
       }
 
-      const handlePlayerJoined = (data: any) => {
+      const handlePlayerJoined = (data: PlayerEventPayload) => {
         addLog(`${data.playerName} joined the game`, 'join')
       }
 
-      const handlePlayerLeft = (data: any) => {
+      const handlePlayerLeft = (data: PlayerEventPayload) => {
         addLog(`${data.playerName} left the game`, 'leave')
       }
 
-      const handleError = (data: any) => {
+      const handleError = (data: SocketErrorPayload) => {
         addLog(`Error: ${data.message}`, 'error')
       }
 
@@ -95,7 +93,7 @@ function HostView() {
         addLog('Disconnected from server', 'error')
       }
 
-      const handleConnectError = (error: any) => {
+      const handleConnectError = (error: Error) => {
         addLog(`Connection error: ${error.message}`, 'error')
       }
 

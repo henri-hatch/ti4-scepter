@@ -1,37 +1,15 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import type { ReactNode } from 'react'
 import { io, Socket } from 'socket.io-client'
-
-export interface PlayerInfo {
-  gameName: string | null
-  playerId: string | null
-  playerName: string | null
-}
-
-interface SocketContextType {
-  socket: Socket | null
-  isConnected: boolean
-  playerInfo: PlayerInfo
-  connectionType: 'player' | 'host' | null
-  initializeSocket: (type: 'player' | 'host') => void
-  joinGame: (gameName: string, playerId: string, playerName: string) => void
-  leaveGame: () => void
-  hostGame: (gameName: string) => void
-  stopHosting: () => void
-  disconnect: () => void
-  onLeftGame: (callback: (data: any) => void) => (() => void) | undefined
-  onSessionEnded: (callback: (data: any) => void) => (() => void) | undefined
-}
-
-const SocketContext = createContext<SocketContextType | undefined>(undefined)
-
-export const useSocket = () => {
-  const context = useContext(SocketContext)
-  if (context === undefined) {
-    throw new Error('useSocket must be used within a SocketProvider')
-  }
-  return context
-}
+import { SocketContext } from './socketContext'
+import type {
+  JoinedGamePayload,
+  LeftGamePayload,
+  PlayerInfo,
+  SessionEndedPayload,
+  SocketContextValue,
+  SocketErrorPayload
+} from './socketTypes'
 
 interface SocketProviderProps {
   children: ReactNode
@@ -103,7 +81,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
       // Player-specific events
       if (type === 'player') {
-        newSocket.on('joined_game', (data) => {
+        newSocket.on('joined_game', (data: JoinedGamePayload) => {
           setPlayerInfo({
             gameName: data.gameName,
             playerId: data.playerId,
@@ -112,7 +90,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
           console.log('Successfully joined game as:', data.playerName)
         })
 
-        newSocket.on('left_game', (data) => {
+        newSocket.on('left_game', (data: LeftGamePayload) => {
           setPlayerInfo({
             gameName: null,
             playerId: null,
@@ -121,7 +99,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
           console.log('Left game:', data.gameName)
         })
 
-        newSocket.on('session_ended', (data: any) => {
+        newSocket.on('session_ended', (data: SessionEndedPayload) => {
           setPlayerInfo({
             gameName: null,
             playerId: null,
@@ -131,7 +109,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
         })
       }
 
-      newSocket.on('error', (data) => {
+      newSocket.on('error', (data: SocketErrorPayload) => {
         console.error('Socket error:', data.message)
       })
     }
@@ -184,14 +162,14 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
     resetConnectionState()
   }, [socket, resetConnectionState])
-  const onLeftGame = useCallback((callback: (data: any) => void) => {
+  const onLeftGame = useCallback((callback: (data: LeftGamePayload) => void) => {
     if (socket && connectionType === 'player') {
       socket.on('left_game', callback)
       return () => socket.off('left_game', callback)
     }
   }, [socket, connectionType])
 
-  const onSessionEnded = useCallback((callback: (data: any) => void) => {
+  const onSessionEnded = useCallback((callback: (data: SessionEndedPayload) => void) => {
     if (socket && connectionType === 'player') {
       socket.on('session_ended', callback)
       return () => socket.off('session_ended', callback)
@@ -206,7 +184,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       }
     }
   }, [socket])
-  const value: SocketContextType = {
+  const value: SocketContextValue = {
     socket,
     isConnected,
     playerInfo,

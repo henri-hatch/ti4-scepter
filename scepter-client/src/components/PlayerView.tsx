@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { useSocket } from '../contexts/SocketContext'
+import { useSocket } from '../contexts/useSocket'
+import type { LeftGamePayload, SessionEndedPayload } from '../contexts/socketTypes'
 import '../styles/PlayerView.css'
 
 function PlayerView() {
@@ -48,14 +49,14 @@ function PlayerView() {
 
   useEffect(() => {
     // Handle session ended and left game events
-    const handleSessionEnded = (data: any) => {
+    const handleSessionEnded = (data: SessionEndedPayload) => {
       console.log('Game session ended:', data.gameName)
       alert(data.message || `Game session "${data.gameName}" has ended. The host has stopped hosting.`)
       hasJoinedGame.current = false
       navigate('/')
     }
 
-    const handleLeftGame = (data: any) => {
+    const handleLeftGame = (data: LeftGamePayload) => {
       console.log('Left game:', data.gameName)
       hasJoinedGame.current = false
       navigate('/')

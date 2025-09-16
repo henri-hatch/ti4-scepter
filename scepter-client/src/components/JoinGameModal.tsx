@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useSocket } from '../contexts/SocketContext'
+import { useSocket } from '../contexts/useSocket'
+import type { JoinedGamePayload, SocketErrorPayload } from '../contexts/socketTypes'
 import '../styles/JoinGameModal.css'
 
 interface ActiveGame {
@@ -32,6 +33,16 @@ function JoinGameModal({ isOpen, onClose }: JoinGameModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string>('')
   const [step, setStep] = useState<'select-game' | 'select-player'>('select-game')
+
+  const handleClose = useCallback(() => {
+    setSelectedGame('')
+    setSelectedPlayer('')
+    setAvailablePlayers([])
+    setError('')
+    setStep('select-game')
+    onClose()
+  }, [onClose])
+
   useEffect(() => {
     if (isOpen) {
       // Initialize socket connection for joining only if not already connected as player
@@ -48,9 +59,9 @@ function JoinGameModal({ isOpen, onClose }: JoinGameModalProps) {
   useEffect(() => {
     // Set up socket event listeners when socket is available
     if (socket && isOpen) {
-      const handleJoinedGame = (data: any) => {
+      const handleJoinedGame = (data: JoinedGamePayload) => {
         console.log('Successfully joined game:', data)
-        onClose()
+        handleClose()
         navigate('/player', { 
           state: { 
             gameName: data.gameName,
@@ -60,7 +71,7 @@ function JoinGameModal({ isOpen, onClose }: JoinGameModalProps) {
         })
       }
 
-      const handleError = (data: any) => {
+      const handleError = (data: SocketErrorPayload) => {
         console.error('Socket error:', data.message)
         setError(data.message)
         setIsLoading(false)
@@ -79,7 +90,7 @@ function JoinGameModal({ isOpen, onClose }: JoinGameModalProps) {
         socket.off('error', handleError)
       }
     }
-  }, [socket, isOpen, navigate, onClose])
+  }, [socket, isOpen, navigate, handleClose])
 
   const fetchActiveGames = async () => {
     try {
@@ -152,15 +163,6 @@ function JoinGameModal({ isOpen, onClose }: JoinGameModalProps) {
       setAvailablePlayers([])
     }
   }
-  const handleClose = () => {
-    setSelectedGame('')
-    setSelectedPlayer('')
-    setAvailablePlayers([])
-    setError('')
-    setStep('select-game')
-    onClose()
-  }
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
