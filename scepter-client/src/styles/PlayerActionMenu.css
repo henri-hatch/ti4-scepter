@@ -1,0 +1,117 @@
+.player-action-menu {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 1002;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.player-action-button {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+}
+
+.player-action-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5);
+}
+
+.player-action-button:focus-visible {
+  outline: 2px solid rgba(100, 108, 255, 0.65);
+  outline-offset: 4px;
+}
+
+.player-action-icon,
+.player-action-icon::before,
+.player-action-icon::after {
+  display: block;
+  width: 1.75rem;
+  height: 0.2rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.85);
+  content: '';
+}
+
+.player-action-icon::before,
+.player-action-icon::after {
+  position: relative;
+  display: block;
+  top: -0.4rem;
+}
+
+.player-action-icon::after {
+  top: 0.4rem;
+}
+
+.player-action-sheet {
+  margin-top: 0.75rem;
+  background: rgba(17, 24, 39, 0.92);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0.5rem;
+  width: min(260px, 90vw);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.55);
+}
+
+.player-action-sheet ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.player-action-sheet button {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(59, 130, 246, 0.15);
+  color: #e0e7ff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.player-action-sheet button:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.35);
+  transform: translateY(-1px);
+}
+
+.player-action-sheet button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.player-action-empty {
+  color: rgba(255, 255, 255, 0.6);
+  text-align: center;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 600px) {
+  .player-action-button {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .player-action-icon,
+  .player-action-icon::before,
+  .player-action-icon::after {
+    width: 1.4rem;
+  }
+}

@@ -5,6 +5,15 @@ from flask import Flask, send_from_directory, request, jsonify
 from flask_socketio import SocketIO, emit, join_room, leave_room, disconnect
 
 from routes.games import create_game_file, list_games
+from routes.planets import (
+    list_catalog_planets,
+    list_player_planets,
+    add_player_planet,
+    update_player_planet_state,
+    remove_player_planet,
+    list_game_planet_definitions
+)
+from components.planet_catalog import PlanetCatalogError
 from components.session_manager import session_manager
 from config import get_config
 
@@ -174,6 +183,58 @@ def get_game_players(game_name):
     except Exception as e:
         logger.error(f"Error getting players for game '{game_name}': {e}", exc_info=True)
         return jsonify({"error": "Failed to get game players"}), 500
+
+
+@app.route('/api/planets/catalog', methods=['GET'])
+def get_planet_catalog():
+    """Return the base planet catalog."""
+    try:
+        catalog = list_catalog_planets()
+        return jsonify(catalog), 200
+    except PlanetCatalogError as e:
+        logger.error("Planet catalog error: %s", e)
+        return jsonify({"error": "Planet catalog unavailable"}), 500
+
+
+@app.route('/api/game/<game_name>/planets/definitions', methods=['GET'])
+def get_game_planet_definitions(game_name):
+    """Return the planet definitions stored for a specific game."""
+    response, status = list_game_planet_definitions(game_name, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/planets', methods=['GET'])
+def get_player_planets(game_name, player_id):
+    """Return the planets currently owned by the player."""
+    response, status = list_player_planets(game_name, player_id, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/planets', methods=['POST'])
+def create_player_planet(game_name, player_id):
+    """Assign a planet to a player."""
+    data = request.get_json(silent=True) or {}
+    response, status = add_player_planet(game_name, player_id, data.get('planetKey'), GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/planets/<planet_key>', methods=['PATCH'])
+def patch_player_planet(game_name, player_id, planet_key):
+    """Update a player's planet state such as exhausted/ready."""
+    data = request.get_json(silent=True) or {}
+    if 'isExhausted' not in data:
+        return jsonify({"error": "isExhausted is required"}), 400
+
+    is_exhausted = bool(data.get('isExhausted'))
+    response, status = update_player_planet_state(game_name, player_id, planet_key, is_exhausted, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/planets/<planet_key>', methods=['DELETE'])
+def delete_player_planet(game_name, player_id, planet_key):
+    """Remove a planet from a player."""
+    response, status = remove_player_planet(game_name, player_id, planet_key, GAMES_DIR)
+    return jsonify(response), status
 
 # WebSocket event handlers
 @socketio.on('connect')

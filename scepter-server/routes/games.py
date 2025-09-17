@@ -5,6 +5,7 @@ import logging
 from typing import List, Dict, Any, Tuple
 
 from components.database import execute_query, execute_script, table_exists, DatabaseError
+from components.planet_catalog import populate_planet_definitions
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +63,10 @@ def create_game_file(game_name: str, players: List[Dict], games_dir: str = 'game
         '''
         
         execute_script(db_path, schema_script)
-        
+
+        # Seed planet definitions for this game
+        populate_planet_definitions(db_path)
+
         # Insert game metadata
         current_time = datetime.datetime.now().isoformat()
         execute_query(
@@ -230,3 +234,9 @@ def update_game_timestamp(db_path: str) -> bool:
         return True
     except DatabaseError:
         return False
+
+
+def get_game_db_path(game_name: str, games_dir: str = 'games') -> str:
+    """Return the expected database path for a game name."""
+    safe_game_name = "".join(c for c in game_name if c.isalnum() or c in (' ', '-', '_')).strip()
+    return os.path.join(games_dir, f"{safe_game_name}.sqlite3")

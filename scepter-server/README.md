@@ -18,9 +18,13 @@ scepter-server/
 ├── config.py            # Configuration settings
 ├── requirements.txt     # Python dependencies
 ├── components/
-│   └── database.py      # Database utilities and connection management
+│   ├── database.py      # Database utilities and connection management
+│   └── planet_catalog.py # Planet seeding helpers
+├── data/
+│   └── planets.json     # Base planet catalog used when creating games
 ├── routes/
-│   └── games.py         # Game-related routes and logic
+│   ├── games.py         # Game-related routes and logic
+│   └── planets.py       # Planet inventory endpoints
 └── games/              # Directory for game database files
 ```
 
@@ -46,6 +50,14 @@ The server will start on `http://localhost:5000` by default.
 ### Games
 - **POST** `/api/create-game` - Create a new game
 - **GET** `/api/list-games` - List all existing games
+
+### Planets
+- **GET** `/api/planets/catalog` - Returns the base planet catalog seeded into new games.
+- **GET** `/api/game/<game_name>/planets/definitions` - Lists planet definitions stored in the selected game database.
+- **GET** `/api/game/<game_name>/player/<player_id>/planets` - Fetches the planets assigned to the given player.
+- **POST** `/api/game/<game_name>/player/<player_id>/planets` - Adds a catalog planet to the player's inventory.
+- **PATCH** `/api/game/<game_name>/player/<player_id>/planets/<planet_key>` - Updates whether a planet is exhausted (card flipped).
+- **DELETE** `/api/game/<game_name>/player/<player_id>/planets/<planet_key>` - Removes a planet from the player's inventory.
 
 ### Static Files
 - **GET** `/` - Serve React application
@@ -78,6 +90,23 @@ Each game database contains:
 - `name` - Game name
 - `created_at` - Creation timestamp
 - `last_updated` - Last update timestamp
+
+### `planetDefinitions` table
+- `planetKey` - Catalog key for lookup
+- `name` - Display name
+- `type` - Planet type (Cultural/Hazardous/Industrial)
+- `techSpecialty` - Optional tech specialty string
+- `resources` - Resource value
+- `influence` - Influence value
+- `legendary` - Boolean stored as 0/1
+- `assetFront` / `assetBack` - Relative image paths
+
+### `playerPlanets` table
+- `id` - Auto-incrementing primary key
+- `playerId` - Owning player reference
+- `planetKey` - Planet assigned to the player
+- `isExhausted` - Boolean stored as 0/1
+- `acquiredAt` - Timestamp of assignment
 
 ## Error Handling
 

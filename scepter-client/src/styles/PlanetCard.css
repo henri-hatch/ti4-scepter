@@ -1,0 +1,76 @@
+.planet-card-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+  width: 220px;
+}
+
+.planet-card-meta {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.planet-card-name {
+  font-weight: 700;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.planet-card-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+}
+
+.planet-card-type {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #93c5fd;
+}
+
+.planet-card-resource {
+  font-weight: 600;
+}
+
+.planet-card-tech {
+  font-size: 0.75rem;
+  color: #fef08a;
+  text-align: center;
+}
+
+.planet-card-tech--none {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.planet-card-legendary {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #fbbf24;
+  text-align: center;
+}
+
+.planet-card {
+  width: 100%;
+  max-width: 220px;
+}
+
+@media (max-width: 600px) {
+  .planet-card-wrapper {
+    width: 160px;
+  }
+
+  .planet-card {
+    max-width: 160px;
+  }
+}

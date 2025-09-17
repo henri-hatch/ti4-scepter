@@ -1,0 +1,26 @@
+{
+  "planets": [
+    {
+      "key": "abaddon",
+      "name": "Abaddon",
+      "type": "Cultural",
+      "techSpecialty": null,
+      "resources": 1,
+      "influence": 0,
+      "legendary": false,
+      "assetFront": "planets/abaddon.face.jpg",
+      "assetBack": "planets/abaddon.back.jpg"
+    },
+    {
+      "key": "archon_vail",
+      "name": "Archon Vail",
+      "type": "Hazardous",
+      "techSpecialty": "Propulsion - Blue",
+      "resources": 1,
+      "influence": 3,
+      "legendary": false,
+      "assetFront": "planets/archon_vail.face.jpg",
+      "assetBack": "planets/archon_vail.back.jpg"
+    }
+  ]
+}
