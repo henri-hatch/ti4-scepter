@@ -62,6 +62,7 @@
   left: 0;
   width: 220px;
   height: 100%;
+  max-height: 100vh;
   padding: 5rem 1rem 1rem;
   background: rgba(0, 0, 0, 0.9);
   transform: translateX(-100%);
@@ -70,6 +71,8 @@
   flex-direction: column;
   gap: 1rem;
   z-index: 1000;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .side-menu.open {
