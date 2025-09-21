@@ -1,0 +1,323 @@
+.technology-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  color: #fff;
+}
+
+.technology-description {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.75);
+  max-width: 760px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+.technology-board {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.technology-section {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.technology-section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.technology-section-header h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.technology-section-divider {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.1), rgba(148, 163, 184, 0.6), rgba(148, 163, 184, 0.1));
+}
+
+.technology-cards-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  justify-items: center;
+}
+
+.technology-card-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  width: 240px;
+}
+
+.technology-card {
+  width: 100%;
+  aspect-ratio: 88 / 63;
+  max-width: 240px;
+}
+
+.technology-card .card-inner {
+  border-radius: 10px;
+}
+
+.technology-card .card-face img {
+  object-fit: cover;
+}
+
+.technology-card .card-face--back img {
+  filter: grayscale(1) brightness(0.6);
+}
+
+.technology-card .card-face--back::after {
+  content: 'Exhausted';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0.4rem 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(248, 250, 252, 0.95);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 0.85) 80%);
+  text-align: center;
+}
+
+.technology-card-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+  color: rgba(241, 245, 249, 0.9);
+}
+
+.technology-card-meta {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: rgba(148, 163, 184, 0.85);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.technology-card-tier {
+  color: rgba(148, 163, 184, 0.85);
+}
+
+.technology-card-faction {
+  color: rgba(251, 191, 36, 0.95);
+  text-transform: capitalize;
+}
+
+.technology-modal {
+  width: min(720px, 100%);
+  max-height: 80vh;
+}
+
+.technology-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1rem 1.5rem 1.5rem;
+  overflow-y: auto;
+}
+
+.technology-modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.technology-modal-section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.technology-modal-section-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(191, 219, 254, 0.9);
+}
+
+.technology-modal-divider {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0), rgba(59, 130, 246, 0.45), rgba(59, 130, 246, 0));
+}
+
+.technology-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.technology-modal-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 0.75rem;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.technology-modal-item:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: rgba(96, 165, 250, 0.6);
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.technology-modal-item:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.technology-modal-item img {
+  width: 132px;
+  height: 94px;
+  object-fit: cover;
+  border-radius: 8px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+.technology-modal-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.technology-modal-name {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.technology-modal-tier {
+  font-size: 0.8rem;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.technology-modal-faction {
+  font-size: 0.75rem;
+  color: rgba(251, 191, 36, 0.9);
+  text-transform: capitalize;
+}
+
+.technology-empty {
+  text-align: center;
+  font-size: 1.05rem;
+  color: rgba(255, 255, 255, 0.75);
+  padding: 2rem 1rem;
+  border-radius: 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.technology-error {
+  text-align: center;
+  color: #f87171;
+  font-weight: 600;
+}
+
+.technology-status {
+  text-align: center;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.technology-action-dialog {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.78);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1101;
+  padding: 1.5rem;
+}
+
+.technology-action-content {
+  background: rgba(15, 23, 42, 0.95);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1.5rem;
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+  color: #fff;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55);
+}
+
+.technology-action-content h3 {
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.technology-action-content p {
+  margin-bottom: 1.5rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.technology-action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.technology-action-buttons button {
+  padding: 0.6rem 1.25rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.technology-action-buttons .danger {
+  background: linear-gradient(145deg, #dc2626, #b91c1c);
+  color: #fff;
+}
+
+.technology-action-buttons .secondary {
+  background: rgba(148, 163, 184, 0.3);
+  color: #e2e8f0;
+}
+
+.technology-action-buttons button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 720px) {
+  .technology-section {
+    padding: 1rem;
+  }
+
+  .technology-card-wrapper {
+    width: 200px;
+  }
+
+  .technology-card {
+    max-width: 200px;
+  }
+}

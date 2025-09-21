@@ -35,6 +35,10 @@
   transform: rotateY(180deg);
 }
 
+.card-base.card--flip-vertical.is-flipped .card-inner {
+  transform: rotateX(180deg);
+}
+
 .card-face {
   position: absolute;
   inset: 0;
@@ -56,4 +60,8 @@
 
 .card-face--back {
   transform: rotateY(180deg);
+}
+
+.card-base.card--flip-vertical .card-face--back {
+  transform: rotateX(180deg);
 }

@@ -4,7 +4,7 @@ import sys
 from flask import Flask, send_from_directory, request, jsonify
 from flask_socketio import SocketIO, emit, join_room, leave_room, disconnect
 
-from routes.games import create_game_file, list_games
+from routes.games import create_game_file, list_games, get_player_profile
 from routes.planets import (
     list_catalog_planets,
     list_player_planets,
@@ -13,7 +13,16 @@ from routes.planets import (
     remove_player_planet,
     list_game_planet_definitions
 )
+from routes.technology import (
+    list_catalog_technologies,
+    list_player_technologies,
+    add_player_technology,
+    update_player_technology_state,
+    remove_player_technology,
+    list_player_technology_definitions
+)
 from components.planet_catalog import PlanetCatalogError
+from components.technology_catalog import TechnologyCatalogError
 from components.session_manager import session_manager
 from config import get_config
 
@@ -185,6 +194,13 @@ def get_game_players(game_name):
         return jsonify({"error": "Failed to get game players"}), 500
 
 
+@app.route('/api/game/<game_name>/player/<player_id>', methods=['GET'])
+def get_player_info(game_name, player_id):
+    """API endpoint to get a single player's profile for a specific game."""
+    response, status = get_player_profile(game_name, player_id, GAMES_DIR)
+    return jsonify(response), status
+
+
 @app.route('/api/planets/catalog', methods=['GET'])
 def get_planet_catalog():
     """Return the base planet catalog."""
@@ -194,6 +210,17 @@ def get_planet_catalog():
     except PlanetCatalogError as e:
         logger.error("Planet catalog error: %s", e)
         return jsonify({"error": "Planet catalog unavailable"}), 500
+
+
+@app.route('/api/technology/catalog', methods=['GET'])
+def get_technology_catalog():
+    """Return the base technology catalog."""
+    try:
+        catalog = list_catalog_technologies()
+        return jsonify(catalog), 200
+    except TechnologyCatalogError as e:
+        logger.error("Technology catalog error: %s", e)
+        return jsonify({"error": "Technology catalog unavailable"}), 500
 
 
 @app.route('/api/game/<game_name>/planets/definitions', methods=['GET'])
@@ -234,6 +261,47 @@ def patch_player_planet(game_name, player_id, planet_key):
 def delete_player_planet(game_name, player_id, planet_key):
     """Remove a planet from a player."""
     response, status = remove_player_planet(game_name, player_id, planet_key, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/technology', methods=['GET'])
+def get_player_technology(game_name, player_id):
+    """Return the technology cards currently owned by the player."""
+    response, status = list_player_technologies(game_name, player_id, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/technology', methods=['POST'])
+def create_player_technology(game_name, player_id):
+    """Assign a technology card to a player."""
+    data = request.get_json(silent=True) or {}
+    response, status = add_player_technology(game_name, player_id, data.get('technologyKey'), GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/technology/<technology_key>', methods=['PATCH'])
+def patch_player_technology(game_name, player_id, technology_key):
+    """Update a player's technology state such as exhausted/ready."""
+    data = request.get_json(silent=True) or {}
+    if 'isExhausted' not in data:
+        return jsonify({"error": "isExhausted is required"}), 400
+
+    is_exhausted = bool(data.get('isExhausted'))
+    response, status = update_player_technology_state(game_name, player_id, technology_key, is_exhausted, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/technology/<technology_key>', methods=['DELETE'])
+def delete_player_technology(game_name, player_id, technology_key):
+    """Remove a technology card from a player."""
+    response, status = remove_player_technology(game_name, player_id, technology_key, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/technology/definitions', methods=['GET'])
+def get_player_technology_definitions(game_name, player_id):
+    """Return the technology definitions available to the player."""
+    response, status = list_player_technology_definitions(game_name, player_id, GAMES_DIR)
     return jsonify(response), status
 
 # WebSocket event handlers

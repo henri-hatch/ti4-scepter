@@ -240,3 +240,44 @@ def get_game_db_path(game_name: str, games_dir: str = 'games') -> str:
     """Return the expected database path for a game name."""
     safe_game_name = "".join(c for c in game_name if c.isalnum() or c in (' ', '-', '_')).strip()
     return os.path.join(games_dir, f"{safe_game_name}.sqlite3")
+
+
+def get_player_profile(game_name: str, player_id: str, games_dir: str = 'games') -> Tuple[Dict[str, Any], int]:
+    """Return basic player information including faction and resources."""
+    db_path = get_game_db_path(game_name, games_dir)
+    if not os.path.exists(db_path):
+        logger.warning("Requested player profile for non-existent game '%s'", game_name)
+        return {"error": "Game not found"}, 404
+
+    try:
+        player = execute_query(
+            db_path,
+            """
+                SELECT playerId,
+                       name,
+                       faction,
+                       resources,
+                       influence,
+                       commodities,
+                       trade_goods AS tradeGoods,
+                       victoryPoints
+                FROM players
+                WHERE playerId = ?
+            """,
+            (player_id,),
+            fetch_one=True
+        )
+    except DatabaseError as exc:
+        logger.error("Failed to fetch player profile for '%s' in '%s': %s", player_id, game_name, exc)
+        return {"error": "Unable to load player"}, 500
+
+    if not player:
+        return {"error": "Player not found"}, 404
+
+    player['faction'] = (player.get('faction') or 'none').lower()
+    numeric_fields = ['resources', 'influence', 'commodities', 'tradeGoods', 'victoryPoints']
+    for field in numeric_fields:
+        if field in player and player[field] is not None:
+            player[field] = int(player[field])
+
+    return {'player': player}, 200

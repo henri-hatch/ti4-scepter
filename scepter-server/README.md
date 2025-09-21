@@ -7,6 +7,7 @@ Backend server for the TI4 Scepter application built with Flask and SQLite.
 - **Game Management**: Create and list TI4 games
 - **SQLite Database**: Each game stored in its own SQLite database
 - **RESTful API**: Clean API endpoints for frontend integration
+- **Technology & Planets**: Catalog seeding, validation, and player inventories
 - **Error Handling**: Comprehensive error handling and logging
 - **Configuration**: Environment-based configuration system
 
@@ -19,12 +20,15 @@ scepter-server/
 ├── requirements.txt     # Python dependencies
 ├── components/
 │   ├── database.py      # Database utilities and connection management
-│   └── planet_catalog.py # Planet seeding helpers
+│   ├── planet_catalog.py # Planet seeding helpers
+│   └── technology_catalog.py # Technology seeding helpers
 ├── data/
-│   └── planets.json     # Base planet catalog used when creating games
+│   ├── planets.json     # Base planet catalog used when creating games
+│   └── technology.json  # Base technology catalog used when creating games
 ├── routes/
 │   ├── games.py         # Game-related routes and logic
-│   └── planets.py       # Planet inventory endpoints
+│   ├── planets.py       # Planet inventory endpoints
+│   └── technology.py    # Technology inventory endpoints
 └── games/              # Directory for game database files
 ```
 
@@ -51,6 +55,9 @@ The server will start on `http://localhost:5000` by default.
 - **POST** `/api/create-game` - Create a new game
 - **GET** `/api/list-games` - List all existing games
 
+### Players
+- **GET** `/api/game/<game_name>/player/<player_id>` - Returns the player's profile including faction and track totals.
+
 ### Planets
 - **GET** `/api/planets/catalog` - Returns the base planet catalog seeded into new games.
 - **GET** `/api/game/<game_name>/planets/definitions` - Lists planet definitions stored in the selected game database.
@@ -58,6 +65,14 @@ The server will start on `http://localhost:5000` by default.
 - **POST** `/api/game/<game_name>/player/<player_id>/planets` - Adds a catalog planet to the player's inventory.
 - **PATCH** `/api/game/<game_name>/player/<player_id>/planets/<planet_key>` - Updates whether a planet is exhausted (card flipped).
 - **DELETE** `/api/game/<game_name>/player/<player_id>/planets/<planet_key>` - Removes a planet from the player's inventory.
+
+### Technology
+- **GET** `/api/technology/catalog` - Returns the base technology catalog with faction metadata.
+- **GET** `/api/game/<game_name>/player/<player_id>/technology/definitions` - Lists catalog technology available to the player (faction-aware).
+- **GET** `/api/game/<game_name>/player/<player_id>/technology` - Fetches the technology assigned to the player.
+- **POST** `/api/game/<game_name>/player/<player_id>/technology` - Adds a technology card to the player's inventory after validation.
+- **PATCH** `/api/game/<game_name>/player/<player_id>/technology/<technology_key>` - Updates whether a technology card is exhausted.
+- **DELETE** `/api/game/<game_name>/player/<player_id>/technology/<technology_key>` - Removes a technology card from the player's inventory.
 
 ### Static Files
 - **GET** `/` - Serve React application
@@ -105,6 +120,21 @@ Each game database contains:
 - `id` - Auto-incrementing primary key
 - `playerId` - Owning player reference
 - `planetKey` - Planet assigned to the player
+- `isExhausted` - Boolean stored as 0/1
+- `acquiredAt` - Timestamp of assignment
+
+### `technologyDefinitions` table
+- `technologyKey` - Catalog key for lookup
+- `name` - Display name
+- `type` - Discipline (Biotic/Propulsion/Cybernetic/Warfare)
+- `faction` - Owning faction or `none`
+- `tier` - Tier index 0-3
+- `asset` - Relative image path
+
+### `playerTechnologies` table
+- `id` - Auto-incrementing primary key
+- `playerId` - Owning player reference
+- `technologyKey` - Technology assigned to the player
 - `isExhausted` - Boolean stored as 0/1
 - `acquiredAt` - Timestamp of assignment
 

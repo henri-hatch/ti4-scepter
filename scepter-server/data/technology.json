@@ -1,0 +1,52 @@
+{
+  "technology": [
+    {
+      "key": "neural_motivator",
+      "name": "Neural Motivator",
+      "type": "Biotic",
+      "faction": "none",
+      "tier": 0,
+      "asset": "technology/neural_motivator.face.jpg"
+    },
+    {
+      "key": "dark_energy_tap",
+      "name": "Dark Energy Tap",
+      "type": "Propulsion",
+      "faction": "none",
+      "tier": 0,
+      "asset": "technology/dark_energy_tap.face.jpg"
+    },
+    {
+      "key": "sarween_tools",
+      "name": "Sarween Tools",
+      "type": "Cybernetic",
+      "faction": "none",
+      "tier": 0,
+      "asset": "technology/sarween_tools.face.jpg"
+    },
+    {
+      "key": "ai_development_algorithm",
+      "name": "AI Development Algorithm",
+      "type": "Warfare",
+      "faction": "none",
+      "tier": 0,
+      "asset": "technology/ai_development_algorithm.face.jpg"
+    },
+    {
+      "key": "aetherstream",
+      "name": "Aetherstream",
+      "type": "Propulsion",
+      "faction": "empyrean",
+      "tier": 0,
+      "asset": "technology/empyrean/aetherstream.face.jpg"
+    },
+    {
+      "key": "voidwatch",
+      "name": "Voidwatch",
+      "type": "Biotic",
+      "faction": "empyrean",
+      "tier": 0,
+      "asset": "technology/empyrean/voidwatch.face.jpg"
+    }
+  ]
+}
