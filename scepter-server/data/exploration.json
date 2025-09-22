@@ -1,0 +1,53 @@
+{
+  "exploration": [
+    {
+      "key": "demilitarized_zone",
+      "name": "Demilitarized Zone",
+      "type": "Cultural",
+      "subtype": "attach",
+      "asset": "exploration/demilitarized_zone.jpg"
+    },
+    {
+      "key": "expedition_1",
+      "name": "Expedition",
+      "type": "Hazardous",
+      "subtype": "action",
+      "asset": "exploration/expedition.1.jpg"
+    },
+    {
+      "key": "industrial_relic_fragment_1",
+      "name": "Industrial Relic Fragment",
+      "type": "Industrial",
+      "subtype": "relic_fragment",
+      "asset": "exploration/industrial_relic_fragment.1.jpg"
+    },
+    {
+      "key": "frontier_relic_fragment_1",
+      "name": "Frontier Relic Fragment",
+      "type": "Frontier",
+      "subtype": "relic_fragment",
+      "asset": "exploration/frontier_relic_fragment.1.jpg"
+    },
+    {
+      "key": "dyson_sphere",
+      "name": "Dyson Sphere",
+      "type": "Cultural",
+      "subtype": "attach",
+      "asset": "exploration/dyson_sphere.jpg"
+    },
+    {
+      "key": "lazax_survivors",
+      "name": "Lazax Survivors",
+      "type": "Hazardous",
+      "subtype": "action",
+      "asset": "exploration/lazax_survivors.jpg"
+    },
+    {
+      "key": "propulsion_research_facility",
+      "name": "Propulsion Research Facility",
+      "type": "Industrial",
+      "subtype": "attach",
+      "asset": "exploration/propulsion_research_facility.jpg"
+    }
+  ]
+}

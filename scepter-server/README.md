@@ -19,16 +19,21 @@ scepter-server/
 ├── config.py            # Configuration settings
 ├── requirements.txt     # Python dependencies
 ├── components/
-│   ├── database.py      # Database utilities and connection management
-│   ├── planet_catalog.py # Planet seeding helpers
-│   └── technology_catalog.py # Technology seeding helpers
+│   ├── database.py           # Database utilities and connection management
+│   ├── planet_catalog.py     # Planet seeding helpers
+│   ├── technology_catalog.py # Technology seeding helpers
+│   ├── action_catalog.py     # Action card seeding helpers
+│   └── exploration_catalog.py # Exploration card utilities
 ├── data/
-│   ├── planets.json     # Base planet catalog used when creating games
-│   └── technology.json  # Base technology catalog used when creating games
+│   ├── planets.json       # Base planet catalog used when creating games
+│   ├── technology.json    # Base technology catalog used when creating games
+│   ├── actions.json       # Action card catalog
+│   └── exploration.json   # Exploration card catalog
 ├── routes/
 │   ├── games.py         # Game-related routes and logic
 │   ├── planets.py       # Planet inventory endpoints
-│   └── technology.py    # Technology inventory endpoints
+│   ├── technology.py    # Technology inventory endpoints
+│   └── cards.py         # Action and exploration endpoints
 └── games/              # Directory for game database files
 ```
 
@@ -73,6 +78,27 @@ The server will start on `http://localhost:5000` by default.
 - **POST** `/api/game/<game_name>/player/<player_id>/technology` - Adds a technology card to the player's inventory after validation.
 - **PATCH** `/api/game/<game_name>/player/<player_id>/technology/<technology_key>` - Updates whether a technology card is exhausted.
 - **DELETE** `/api/game/<game_name>/player/<player_id>/technology/<technology_key>` - Removes a technology card from the player's inventory.
+
+### Action Cards
+- **GET** `/api/actions/catalog` - Returns the global action card catalog.
+- **GET** `/api/game/<game_name>/player/<player_id>/actions` - Lists action cards owned by the player.
+- **GET** `/api/game/<game_name>/player/<player_id>/actions/definitions` - Definitions not yet owned by the player.
+- **POST** `/api/game/<game_name>/player/<player_id>/actions` - Assigns an action card by key.
+- **PATCH** `/api/game/<game_name>/player/<player_id>/actions/<action_key>` - Toggles exhausted state.
+- **DELETE** `/api/game/<game_name>/player/<player_id>/actions/<action_key>` - Removes the action card.
+- **POST** `/api/game/<game_name>/player/<player_id>/actions/draw` - Returns a random unowned action card.
+
+### Exploration & Attachments
+- **GET** `/api/exploration/catalog` - Returns the exploration catalog.
+- **GET** `/api/game/<game_name>/player/<player_id>/exploration` - Lists non-attachment exploration cards owned by the player.
+- **GET** `/api/game/<game_name>/player/<player_id>/exploration/definitions` - Available exploration definitions filtered by subtype.
+- **POST** `/api/game/<game_name>/player/<player_id>/exploration` - Adds an exploration card to the player's inventory.
+- **PATCH** `/api/game/<game_name>/player/<player_id>/exploration/<exploration_key>` - Toggles exhausted state for exploration actions.
+- **DELETE** `/api/game/<game_name>/player/<player_id>/exploration/<exploration_key>` - Removes the exploration card.
+- **POST** `/api/game/<game_name>/player/<player_id>/planets/<planet_key>/explore` - Resolves an exploration draw for the planet type.
+- **POST** `/api/game/<game_name>/player/<player_id>/planets/<planet_key>/attachments` - Attaches an exploration card to the planet.
+- **DELETE** `/api/game/<game_name>/player/<player_id>/planets/<planet_key>/attachments/<exploration_key>` - Removes the attachment.
+- **GET** `/api/game/<game_name>/player/<player_id>/attachments` - Lists attachments grouped by planet (optional filter via `planetKeys`).
 
 ### Static Files
 - **GET** `/` - Serve React application
@@ -137,6 +163,39 @@ Each game database contains:
 - `technologyKey` - Technology assigned to the player
 - `isExhausted` - Boolean stored as 0/1
 - `acquiredAt` - Timestamp of assignment
+
+### `actionDefinitions` table
+- `actionKey` - Catalog key for lookup
+- `name` - Display name
+- `asset` - Relative image path
+
+### `playerActions` table
+- `id` - Auto-incrementing primary key
+- `playerId` - Owning player reference
+- `actionKey` - Action card assigned to the player
+- `isExhausted` - Boolean stored as 0/1
+- `acquiredAt` - Timestamp of assignment
+
+### `explorationDefinitions` table
+- `explorationKey` - Catalog key for lookup
+- `name` - Display name
+- `type` - Planet type the card applies to
+- `subtype` - `attach`, `action`, or `relic_fragment`
+- `asset` - Relative image path
+
+### `playerExplorationCards` table
+- `id` - Auto-incrementing primary key
+- `playerId` - Owning player reference
+- `explorationKey` - Exploration card assigned to the player
+- `isExhausted` - Boolean stored as 0/1
+- `acquiredAt` - Timestamp of assignment
+
+### `planetAttachments` table
+- `id` - Auto-incrementing primary key
+- `playerId` - Owning player reference
+- `planetKey` - Planet receiving the attachment
+- `explorationKey` - Attached exploration card key
+- `attachedAt` - Timestamp of attachment
 
 ## Error Handling
 

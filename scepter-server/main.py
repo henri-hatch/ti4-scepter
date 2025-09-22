@@ -21,8 +21,29 @@ from routes.technology import (
     remove_player_technology,
     list_player_technology_definitions
 )
+from routes.cards import (
+    list_action_catalog,
+    list_exploration_catalog,
+    list_player_actions,
+    list_player_action_definitions,
+    add_player_action,
+    update_player_action_state,
+    remove_player_action,
+    draw_random_action,
+    list_player_exploration_cards,
+    list_player_exploration_definitions,
+    add_player_exploration,
+    update_player_exploration,
+    remove_player_exploration,
+    explore_planet,
+    add_attachment_to_planet,
+    remove_attachment_from_planet,
+    list_planet_attachments
+)
 from components.planet_catalog import PlanetCatalogError
 from components.technology_catalog import TechnologyCatalogError
+from components.action_catalog import ActionCatalogError
+from components.exploration_catalog import ExplorationCatalogError
 from components.session_manager import session_manager
 from config import get_config
 
@@ -223,6 +244,28 @@ def get_technology_catalog():
         return jsonify({"error": "Technology catalog unavailable"}), 500
 
 
+@app.route('/api/actions/catalog', methods=['GET'])
+def get_action_catalog():
+    """Return the base action card catalog."""
+    try:
+        catalog = list_action_catalog()
+        return jsonify(catalog), 200
+    except ActionCatalogError as e:
+        logger.error("Action card catalog error: %s", e)
+        return jsonify({"error": "Action card catalog unavailable"}), 500
+
+
+@app.route('/api/exploration/catalog', methods=['GET'])
+def get_exploration_catalog():
+    """Return the base exploration card catalog."""
+    try:
+        catalog = list_exploration_catalog()
+        return jsonify(catalog), 200
+    except ExplorationCatalogError as e:
+        logger.error("Exploration catalog error: %s", e)
+        return jsonify({"error": "Exploration catalog unavailable"}), 500
+
+
 @app.route('/api/game/<game_name>/planets/definitions', methods=['GET'])
 def get_game_planet_definitions(game_name):
     """Return the planet definitions stored for a specific game."""
@@ -302,6 +345,142 @@ def delete_player_technology(game_name, player_id, technology_key):
 def get_player_technology_definitions(game_name, player_id):
     """Return the technology definitions available to the player."""
     response, status = list_player_technology_definitions(game_name, player_id, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/actions', methods=['GET'])
+def get_player_actions_endpoint(game_name, player_id):
+    """Return the action cards currently owned by the player."""
+    response, status = list_player_actions(game_name, player_id, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/actions/definitions', methods=['GET'])
+def get_player_action_definitions(game_name, player_id):
+    """Return action card definitions the player can still acquire."""
+    response, status = list_player_action_definitions(game_name, player_id, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/actions', methods=['POST'])
+def create_player_action(game_name, player_id):
+    """Assign an action card to a player."""
+    data = request.get_json(silent=True) or {}
+    response, status = add_player_action(game_name, player_id, data.get('actionKey'), GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/actions/<action_key>', methods=['PATCH'])
+def patch_player_action(game_name, player_id, action_key):
+    """Update a player's action card state such as exhausted/ready."""
+    data = request.get_json(silent=True) or {}
+    if 'isExhausted' not in data:
+        return jsonify({"error": "isExhausted is required"}), 400
+
+    is_exhausted = bool(data.get('isExhausted'))
+    response, status = update_player_action_state(game_name, player_id, action_key, is_exhausted, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/actions/<action_key>', methods=['DELETE'])
+def delete_player_action(game_name, player_id, action_key):
+    """Remove an action card from a player."""
+    response, status = remove_player_action(game_name, player_id, action_key, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/actions/draw', methods=['POST'])
+def draw_player_action(game_name, player_id):
+    """Randomly draw an action card for the player."""
+    response, status = draw_random_action(game_name, player_id, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/exploration', methods=['GET'])
+def get_player_exploration(game_name, player_id):
+    """Return the exploration cards currently owned by the player."""
+    response, status = list_player_exploration_cards(game_name, player_id, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/exploration/definitions', methods=['GET'])
+def get_player_exploration_definitions_endpoint(game_name, player_id):
+    """Return exploration card definitions filtered by subtype."""
+    subtype_param = request.args.get('subtypes', '')
+    if subtype_param:
+        subtypes = [item.strip() for item in subtype_param.split(',') if item.strip()]
+    else:
+        subtypes = ['action', 'relic_fragment']
+
+    planet_key = request.args.get('planetKey')
+    response, status = list_player_exploration_definitions(
+        game_name,
+        player_id,
+        subtypes,
+        GAMES_DIR,
+        planet_key=planet_key
+    )
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/exploration', methods=['POST'])
+def create_player_exploration(game_name, player_id):
+    """Assign an exploration card to a player."""
+    data = request.get_json(silent=True) or {}
+    response, status = add_player_exploration(game_name, player_id, data.get('explorationKey'), GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/exploration/<exploration_key>', methods=['PATCH'])
+def patch_player_exploration(game_name, player_id, exploration_key):
+    """Update a player's exploration card state (e.g. exhausted)."""
+    data = request.get_json(silent=True) or {}
+    if 'isExhausted' not in data:
+        return jsonify({"error": "isExhausted is required"}), 400
+
+    is_exhausted = bool(data.get('isExhausted'))
+    response, status = update_player_exploration(game_name, player_id, exploration_key, is_exhausted, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/exploration/<exploration_key>', methods=['DELETE'])
+def delete_player_exploration(game_name, player_id, exploration_key):
+    """Remove an exploration card from a player."""
+    response, status = remove_player_exploration(game_name, player_id, exploration_key, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/planets/<planet_key>/explore', methods=['POST'])
+def explore_player_planet(game_name, player_id, planet_key):
+    """Explore a planet for a player."""
+    response, status = explore_planet(game_name, player_id, planet_key, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/planets/<planet_key>/attachments', methods=['POST'])
+def create_planet_attachment(game_name, player_id, planet_key):
+    """Attach an exploration card to a player's planet."""
+    data = request.get_json(silent=True) or {}
+    response, status = add_attachment_to_planet(game_name, player_id, planet_key, data.get('explorationKey'), GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/planets/<planet_key>/attachments/<exploration_key>', methods=['DELETE'])
+def delete_planet_attachment(game_name, player_id, planet_key, exploration_key):
+    """Remove an exploration attachment from a player's planet."""
+    response, status = remove_attachment_from_planet(game_name, player_id, planet_key, exploration_key, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/attachments', methods=['GET'])
+def get_player_attachments(game_name, player_id):
+    """Return attachments grouped by planet for the player."""
+    planet_keys_param = request.args.get('planetKeys')
+    planet_keys = None
+    if planet_keys_param:
+        planet_keys = [key.strip() for key in planet_keys_param.split(',') if key.strip()]
+
+    response, status = list_planet_attachments(game_name, player_id, GAMES_DIR, planet_keys)
     return jsonify(response), status
 
 # WebSocket event handlers

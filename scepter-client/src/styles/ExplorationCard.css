@@ -1,0 +1,83 @@
+.exploration-card-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  width: 170px;
+}
+
+.exploration-card-wrapper.is-disabled {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.exploration-card {
+  width: 100%;
+}
+
+.exploration-card.exploration-card--action .card-face--back img {
+  filter: grayscale(100%) saturate(0.2) brightness(0.65);
+}
+
+.exploration-card.exploration-card--action .card-face--back::after {
+  content: 'Exhausted';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 28%;
+  background: linear-gradient(180deg, rgba(12, 19, 35, 0.2) 0%, rgba(12, 19, 35, 0.92) 70%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 0.65rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.92);
+}
+
+.exploration-card-meta {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: rgba(226, 232, 240, 0.9);
+}
+
+.exploration-card-name {
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+}
+
+.exploration-card-tags {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  font-size: 0.7rem;
+}
+
+.exploration-card-tag {
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.22);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.exploration-card-tag--action {
+  background: rgba(59, 130, 246, 0.3);
+}
+
+.exploration-card-tag--relic_fragment {
+  background: rgba(245, 158, 11, 0.3);
+}
+
+.exploration-card-tag--attach {
+  background: rgba(45, 212, 191, 0.3);
+}
+
+@media (max-width: 640px) {
+  .exploration-card-wrapper {
+    width: 140px;
+  }
+}

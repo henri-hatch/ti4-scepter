@@ -1,0 +1,29 @@
+{
+  "actions": [
+    {
+      "key": "ancient_burial_sites",
+      "name": "Ancient Burial Sites",
+      "asset": "actions/ancient_burial_sites.jpg"
+    },
+    {
+      "key": "blitz",
+      "name": "Blitz",
+      "asset": "actions/blitz.jpg"
+    },
+    {
+      "key": "bribery",
+      "name": "Bribery",
+      "asset": "actions/bribery.jpg"
+    },
+    {
+      "key": "counterstroke",
+      "name": "Counterstroke",
+      "asset": "actions/counterstroke.jpg"
+    },
+    {
+      "key": "deadly_plot",
+      "name": "Deadly Plot",
+      "asset": "actions/deadly_plot.jpg"
+    }
+  ]
+}

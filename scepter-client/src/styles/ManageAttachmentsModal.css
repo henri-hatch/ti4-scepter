@@ -1,0 +1,184 @@
+.manage-attachments-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 3rem 1rem 2rem;
+  z-index: 1200;
+}
+
+.manage-attachments-modal {
+  width: min(720px, 100%);
+  background: rgba(17, 24, 39, 0.95);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 30px 70px rgba(2, 6, 23, 0.55);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 1.8rem 2rem;
+}
+
+.manage-attachments-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.manage-attachments-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.manage-attachments-close {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.75rem;
+  cursor: pointer;
+}
+
+.manage-attachments-subtitle {
+  margin-top: 0.35rem;
+  color: rgba(226, 232, 240, 0.75);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+
+.manage-attachments-search {
+  margin-top: 1.1rem;
+}
+
+.manage-attachments-search input {
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(15, 23, 42, 0.72);
+  color: #fff;
+}
+
+.manage-attachments-content {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.manage-attachments-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.manage-attachments-section-title {
+  font-size: 0.95rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.85);
+}
+
+.manage-attachments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.9rem;
+}
+
+.manage-attachments-item {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(30, 41, 59, 0.78);
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  color: #fff;
+}
+
+.manage-attachments-item img {
+  width: 64px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 8px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
+}
+
+.manage-attachments-item:hover:not(:disabled) {
+  transform: translateY(-3px);
+  border-color: rgba(59, 130, 246, 0.45);
+  background: rgba(59, 130, 246, 0.22);
+}
+
+.manage-attachments-item.is-added {
+  border-color: rgba(34, 197, 94, 0.4);
+  background: rgba(34, 197, 94, 0.18);
+}
+
+.manage-attachments-item.is-added:hover:not(:disabled) {
+  border-color: rgba(248, 113, 113, 0.55);
+  background: rgba(239, 68, 68, 0.18);
+}
+
+.manage-attachments-item:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.manage-attachments-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  text-align: left;
+}
+
+.manage-attachments-name {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.manage-attachments-type {
+  font-size: 0.75rem;
+  color: rgba(226, 232, 240, 0.75);
+}
+
+.manage-attachments-hint {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(226, 232, 240, 0.5);
+}
+
+.manage-attachments-empty {
+  text-align: center;
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  background: rgba(15, 23, 42, 0.45);
+  color: rgba(226, 232, 240, 0.7);
+  font-size: 0.88rem;
+}
+
+.manage-attachments-divider {
+  height: 1px;
+  border: none;
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.15), rgba(148, 163, 184, 0.02));
+}
+
+@media (max-width: 640px) {
+  .manage-attachments-modal {
+    padding: 1.25rem 1.2rem 1.5rem;
+  }
+
+  .manage-attachments-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+}

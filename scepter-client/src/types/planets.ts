@@ -1,3 +1,5 @@
+import type { PlanetAttachment } from './exploration'
+
 export type PlanetType = 'Cultural' | 'Hazardous' | 'Industrial'
 export type TechSpecialty = 'Biotic - Green' | 'Propulsion - Blue' | 'Cybernetic - Yellow' | 'Warfare - Red' | 'None' | null
 
@@ -15,4 +17,5 @@ export interface PlanetDefinition {
 
 export interface PlayerPlanet extends PlanetDefinition {
   isExhausted: boolean
+  attachments: PlanetAttachment[]
 }

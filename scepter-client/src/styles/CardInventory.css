@@ -1,0 +1,104 @@
+.card-inventory-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  color: #fff;
+}
+
+.card-inventory-description {
+  max-width: 680px;
+  margin: 0 auto;
+  text-align: center;
+  color: rgba(226, 232, 240, 0.78);
+  line-height: 1.5;
+}
+
+.card-inventory-status,
+.card-inventory-error {
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+.card-inventory-error {
+  color: #f87171;
+  font-weight: 600;
+}
+
+.card-inventory-status {
+  color: rgba(226, 232, 240, 0.8);
+}
+
+.card-inventory-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  padding: 1.25rem 1.5rem 1.75rem;
+  box-shadow: 0 20px 36px rgba(2, 6, 23, 0.45) inset;
+}
+
+.card-inventory-section h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.card-inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 1.25rem;
+  justify-items: center;
+}
+
+.card-inventory-empty {
+  text-align: center;
+  color: rgba(226, 232, 240, 0.75);
+  font-size: 0.9rem;
+  padding: 1.25rem 0.75rem;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.card-inventory-subtle {
+  text-align: center;
+  color: rgba(203, 213, 225, 0.7);
+  font-size: 0.85rem;
+}
+
+.card-inventory-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+}
+
+.card-inventory-counter {
+  font-size: 0.85rem;
+  color: rgba(148, 163, 184, 0.8);
+}
+
+.card-inventory-divider {
+  height: 1px;
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.25), rgba(148, 163, 184, 0.08));
+  border: none;
+}
+
+.card-inventory-alert {
+  text-align: center;
+  color: rgba(252, 211, 77, 0.9);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 720px) {
+  .card-inventory-section {
+    padding: 1.1rem 1rem 1.5rem;
+  }
+
+  .card-inventory-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+}

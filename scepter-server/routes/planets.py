@@ -1,6 +1,6 @@
 import os
 import logging
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 
 from components.database import execute_query, DatabaseError
 from components.planet_catalog import (
@@ -9,6 +9,12 @@ from components.planet_catalog import (
     get_planet_definition,
     populate_planet_definitions,
     ensure_planet_tables
+)
+from components.exploration_catalog import (
+    ensure_exploration_tables,
+    populate_exploration_definitions,
+    list_planet_attachments_for_player,
+    ExplorationCatalogError
 )
 from routes.games import get_game_db_path, update_game_timestamp
 
@@ -24,7 +30,7 @@ def _ensure_game_database(game_name: str, games_dir: str) -> Tuple[bool, str]:
     return True, db_path
 
 
-def _normalise_planet_rows(rows: List[Dict]) -> List[Dict]:
+def _normalise_planet_rows(rows: List[Dict], attachments: Optional[Dict[str, List[Dict]]] = None) -> List[Dict]:
     """Convert sqlite boolean/int fields to expected Python types."""
     normalised: List[Dict] = []
     for row in rows:
@@ -34,6 +40,11 @@ def _normalise_planet_rows(rows: List[Dict]) -> List[Dict]:
         }
         if 'isExhausted' in row:
             converted['isExhausted'] = bool(row.get('isExhausted', 0))
+        planet_key = row.get('key')
+        if attachments and planet_key in attachments:
+            converted['attachments'] = attachments[planet_key]
+        else:
+            converted['attachments'] = []
         normalised.append(converted)
     return normalised
 
@@ -52,6 +63,15 @@ def list_player_planets(game_name: str, player_id: str, games_dir: str) -> Tuple
 
     ensure_planet_tables(db_path)
     populate_planet_definitions(db_path)
+
+    attachment_map: Dict[str, List[Dict]] = {}
+    try:
+        ensure_exploration_tables(db_path)
+        populate_exploration_definitions(db_path)
+        attachment_map = list_planet_attachments_for_player(db_path, player_id)
+    except (ExplorationCatalogError, DatabaseError) as exc:
+        logger.error("Failed to load planet attachments for game '%s': %s", game_name, exc)
+        attachment_map = {}
 
     try:
         rows = execute_query(
@@ -79,7 +99,7 @@ def list_player_planets(game_name: str, player_id: str, games_dir: str) -> Tuple
         logger.error("Failed to fetch planets for game '%s': %s", game_name, exc)
         return {"error": "Failed to load player planets"}, 500
 
-    return {"planets": _normalise_planet_rows(rows)}, 200
+    return {"planets": _normalise_planet_rows(rows, attachment_map)}, 200
 
 
 def add_player_planet(game_name: str, player_id: str, planet_key: str, games_dir: str) -> Tuple[Dict[str, Any], int]:

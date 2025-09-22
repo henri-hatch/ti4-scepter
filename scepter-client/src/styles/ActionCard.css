@@ -1,0 +1,49 @@
+.action-card-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  width: 170px;
+}
+
+.action-card-wrapper.is-disabled {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.action-card {
+  width: 100%;
+}
+
+.action-card .card-face--back img {
+  filter: grayscale(100%) saturate(0.2) brightness(0.65);
+}
+
+.action-card .card-face--back::after {
+  content: 'Exhausted';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 28%;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.2) 0%, rgba(15, 23, 42, 0.92) 70%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 0.65rem;
+  font-size: 0.9rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.92);
+}
+
+.action-card-name {
+  text-align: center;
+  color: rgba(226, 232, 240, 0.9);
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 640px) {
+  .action-card-wrapper {
+    width: 140px;
+  }
+}

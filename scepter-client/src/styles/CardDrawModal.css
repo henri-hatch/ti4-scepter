@@ -1,0 +1,198 @@
+.card-draw-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  z-index: 1200;
+}
+
+.card-draw-modal {
+  width: min(520px, 100%);
+  background: rgba(17, 24, 39, 0.94);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-draw-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.2rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.card-draw-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.card-draw-close {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.75rem;
+  cursor: pointer;
+}
+
+.card-draw-body {
+  padding: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 280px;
+}
+
+.card-draw-stage {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.card-draw-slot {
+  position: relative;
+  width: min(220px, 65vw);
+  aspect-ratio: 63 / 88;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: radial-gradient(circle at 50% 20%, rgba(59, 130, 246, 0.25), rgba(15, 23, 42, 0.9));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow:
+    0 18px 42px rgba(15, 23, 42, 0.6),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  transition: transform 0.4s ease;
+}
+
+.card-draw-slot img,
+.card-draw-slot > * {
+  width: 100%;
+  height: 100%;
+}
+
+.card-draw-slot.is-loading::after {
+  content: '';
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 3px solid rgba(148, 163, 184, 0.3);
+  border-top-color: rgba(59, 130, 246, 0.85);
+  animation: card-draw-spinner 1s linear infinite;
+}
+
+.card-draw-slot.is-revealed {
+  animation: card-draw-reveal 0.6s ease forwards;
+}
+
+.card-draw-placeholder {
+  font-size: 0.95rem;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 1rem;
+}
+
+.card-draw-error {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.card-draw-error button {
+  align-self: center;
+  padding: 0.6rem 1.4rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background: rgba(59, 130, 246, 0.25);
+  color: #fff;
+}
+
+.card-draw-footer {
+  padding: 1.25rem 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.card-draw-confirm-error {
+  color: #f87171;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.card-draw-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.card-draw-actions button {
+  padding: 0.65rem 1.4rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.card-draw-actions .secondary {
+  background: rgba(148, 163, 184, 0.28);
+  color: #e2e8f0;
+}
+
+.card-draw-actions .primary {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.85), rgba(37, 99, 235, 0.95));
+  color: #fff;
+}
+
+.card-draw-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@keyframes card-draw-reveal {
+  0% {
+    transform: translateY(18px) scale(0.95);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(-6px) scale(1.04);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes card-draw-spinner {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 540px) {
+  .card-draw-modal {
+    width: 100%;
+  }
+
+  .card-draw-body {
+    min-height: 240px;
+  }
+}
