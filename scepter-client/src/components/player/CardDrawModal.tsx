@@ -87,6 +87,8 @@ function CardDrawModal<T>({
       }
     }
 
+    setCard(null)
+    setRevealed(false)
     setLoading(true)
     setError(null)
     setConfirmError(null)
@@ -177,8 +179,15 @@ function CardDrawModal<T>({
             </div>
           ) : (
             <div className="card-draw-stage">
-              <div className={`card-draw-slot ${loading ? 'is-loading' : ''} ${revealed ? 'is-revealed' : ''}`}>
-                {card && renderCard(card, revealed)}
+              <div
+                className={`card-draw-slot ${loading ? 'is-loading' : ''} ${card && !revealed ? 'is-staged' : ''} ${revealed ? 'is-revealed' : ''}`}
+              >
+                {card ? (
+                  <div className={`card-draw-card ${revealed ? 'is-visible' : ''}`}>
+                    {renderCard(card, revealed)}
+                  </div>
+                ) : null}
+                {card && !revealed ? <div className="card-draw-back" aria-hidden="true" /> : null}
                 {!card && !loading ? (
                   <div className="card-draw-placeholder">No card available.</div>
                 ) : null}
@@ -196,7 +205,7 @@ function CardDrawModal<T>({
               type="button"
               className="primary"
               onClick={handleConfirm}
-              disabled={!card || confirming || loading || Boolean(error)}
+              disabled={!card || !revealed || confirming || loading || Boolean(error)}
             >
               {confirming ? 'Saving…' : confirmLabel}
             </button>

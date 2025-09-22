@@ -7,6 +7,7 @@ type ManageAttachmentsModalProps = {
   isOpen: boolean
   onClose: () => void
   planetName: string
+  planetType: string
   attachments: PlanetAttachment[]
   available: ExplorationCardDefinition[]
   onAdd: (card: ExplorationCardDefinition) => void
@@ -18,6 +19,7 @@ function ManageAttachmentsModal({
   isOpen,
   onClose,
   planetName,
+  planetType,
   attachments,
   available,
   onAdd,
@@ -28,10 +30,19 @@ function ManageAttachmentsModal({
 
   const filters = useMemo(() => {
     const term = searchTerm.trim().toLowerCase()
+    const normalizedType = planetType.trim().toLowerCase()
+    const matchesType = (item: { type: string }) => {
+      if (!normalizedType) {
+        return true
+      }
+      return (item.type ?? '').toLowerCase() === normalizedType
+    }
+    const typeFilteredCandidates = available.filter(matchesType)
+
     if (!term) {
       return {
         attached: attachments,
-        candidates: available
+        candidates: typeFilteredCandidates
       }
     }
     const filterFn = (item: { name: string; type: string }) => (
@@ -39,9 +50,9 @@ function ManageAttachmentsModal({
     )
     return {
       attached: attachments.filter(filterFn),
-      candidates: available.filter(filterFn)
+      candidates: typeFilteredCandidates.filter(filterFn)
     }
-  }, [attachments, available, searchTerm])
+  }, [attachments, available, planetType, searchTerm])
 
   if (!isOpen) {
     return null

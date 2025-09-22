@@ -72,13 +72,32 @@
   box-shadow:
     0 18px 42px rgba(15, 23, 42, 0.6),
     inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  transition: transform 0.4s ease;
+  transition:
+    transform 0.45s ease,
+    opacity 0.35s ease,
+    box-shadow 0.35s ease;
 }
 
 .card-draw-slot img,
 .card-draw-slot > * {
   width: 100%;
   height: 100%;
+}
+
+.card-draw-slot.is-staged {
+  transform: translateY(14px) scale(0.95);
+  opacity: 0.88;
+  box-shadow:
+    0 30px 60px rgba(15, 23, 42, 0.58),
+    inset 0 0 0 1px rgba(148, 163, 184, 0.22);
+}
+
+.card-draw-slot.is-revealed {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+  box-shadow:
+    0 24px 50px rgba(15, 23, 42, 0.54),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 .card-draw-slot.is-loading::after {
@@ -92,15 +111,55 @@
   animation: card-draw-spinner 1s linear infinite;
 }
 
-.card-draw-slot.is-revealed {
-  animation: card-draw-reveal 0.6s ease forwards;
-}
-
 .card-draw-placeholder {
   font-size: 0.95rem;
   text-align: center;
   color: rgba(255, 255, 255, 0.7);
   padding: 1rem;
+}
+
+.card-draw-card,
+.card-draw-back {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-draw-card {
+  opacity: 0;
+  transform: translateY(16px) scale(0.95);
+  transition:
+    opacity 0.35s ease,
+    transform 0.45s ease;
+  will-change: opacity, transform;
+}
+
+.card-draw-card.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.card-draw-back {
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.92));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 0 24px rgba(59, 130, 246, 0.22);
+  overflow: hidden;
+}
+
+.card-draw-back::after {
+  content: '';
+  position: absolute;
+  width: 68%;
+  height: 68%;
+  border-radius: 10px;
+  border: 2px solid rgba(59, 130, 246, 0.45);
+  box-shadow:
+    0 0 28px rgba(59, 130, 246, 0.3),
+    inset 0 0 18px rgba(59, 130, 246, 0.2);
 }
 
 .card-draw-error {
@@ -161,21 +220,6 @@
 .card-draw-actions button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-@keyframes card-draw-reveal {
-  0% {
-    transform: translateY(18px) scale(0.95);
-    opacity: 0;
-  }
-  60% {
-    transform: translateY(-6px) scale(1.04);
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(0) scale(1);
-    opacity: 1;
-  }
 }
 
 @keyframes card-draw-spinner {

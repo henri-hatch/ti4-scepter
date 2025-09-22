@@ -526,6 +526,7 @@ function Planets() {
           setAvailableAttachments([])
         }}
         planetName={attachmentsModalPlanet?.name ?? ''}
+        planetType={attachmentsModalPlanet?.type ?? ''}
         attachments={attachmentsModalPlanet?.attachments ?? []}
         available={availableAttachments}
         onAdd={handleAddAttachment}
