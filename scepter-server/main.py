@@ -32,9 +32,15 @@ from routes.cards import (
     draw_random_action,
     list_player_exploration_cards,
     list_player_exploration_definitions,
-    add_player_exploration,
-    update_player_exploration,
-    remove_player_exploration,
+   add_player_exploration,
+   update_player_exploration,
+   remove_player_exploration,
+    list_player_strategems,
+    list_player_strategem_definitions,
+    add_player_strategem,
+    update_player_strategem,
+    remove_player_strategem,
+    update_strategem_trade_goods,
     explore_planet,
     add_attachment_to_planet,
     remove_attachment_from_planet,
@@ -448,6 +454,66 @@ def patch_player_exploration(game_name, player_id, exploration_key):
 def delete_player_exploration(game_name, player_id, exploration_key):
     """Remove an exploration card from a player."""
     response, status = remove_player_exploration(game_name, player_id, exploration_key, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/strategems', methods=['GET'])
+def get_player_strategems_endpoint(game_name, player_id):
+    """Return the strategems currently assigned to the player."""
+    response, status = list_player_strategems(game_name, player_id, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/strategems/definitions', methods=['GET'])
+def get_player_strategem_definitions(game_name, player_id):
+    """Return strategem definitions that can be added to the player's board."""
+    response, status = list_player_strategem_definitions(game_name, player_id, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/strategems', methods=['POST'])
+def create_player_strategem(game_name, player_id):
+    """Assign a strategem to the player's board."""
+    data = request.get_json(silent=True) or {}
+    response, status = add_player_strategem(game_name, player_id, data.get('strategemKey'), GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/strategems/<strategem_key>', methods=['PATCH'])
+def patch_player_strategem(game_name, player_id, strategem_key):
+    """Update a strategem's exhausted state for the player."""
+    data = request.get_json(silent=True) or {}
+    if 'isExhausted' not in data:
+        return jsonify({"error": "isExhausted is required"}), 400
+
+    is_exhausted = bool(data.get('isExhausted'))
+    response, status = update_player_strategem(game_name, player_id, strategem_key, is_exhausted, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/strategems/<strategem_key>', methods=['DELETE'])
+def delete_player_strategem_endpoint(game_name, player_id, strategem_key):
+    """Remove a strategem from the player's board."""
+    response, status = remove_player_strategem(game_name, player_id, strategem_key, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/strategems/<strategem_key>/trade-goods', methods=['PATCH'])
+def patch_strategem_trade_goods(game_name, strategem_key):
+    """Update the trade good counter for a strategem and broadcast the change."""
+    data = request.get_json(silent=True) or {}
+    if 'tradeGoods' not in data:
+        return jsonify({"error": "tradeGoods is required"}), 400
+
+    response, status = update_strategem_trade_goods(game_name, strategem_key, data.get('tradeGoods'), GAMES_DIR)
+
+    if status == 200 and 'strategem' in response:
+        payload = {
+            'gameName': game_name,
+            'strategem': response['strategem']
+        }
+        socketio.emit('strategem_trade_goods_updated', payload, room=game_name)
+
     return jsonify(response), status
 
 

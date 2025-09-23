@@ -1,0 +1,119 @@
+.strategem-card-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+}
+
+.strategem-card-wrapper.is-disabled {
+  opacity: 0.7;
+}
+
+.card-base.strategem-card .card-face--back {
+  position: relative;
+}
+
+.card-base.strategem-card .card-face--back img {
+  filter: grayscale(100%) saturate(0.2) brightness(0.65);
+}
+
+.card-base.strategem-card .card-face--back::after {
+  content: 'Exhausted';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: rgba(226, 232, 240, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 10px rgba(15, 23, 42, 0.8);
+}
+
+.card-base.strategem-card .card-face--front {
+  transition: opacity 0.2s ease;
+}
+
+.card-base.strategem-card.is-flipped .card-face--front {
+  opacity: 0;
+}
+
+.strategem-card-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  text-align: center;
+}
+
+.strategem-card-name {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.strategem-card-trade {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.strategem-card-trade-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.65);
+  color: rgba(226, 232, 240, 0.95);
+  font-size: 1.2rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.strategem-card-trade-button:not(:disabled):hover {
+  background: rgba(59, 130, 246, 0.4);
+  transform: translateY(-1px);
+}
+
+.strategem-card-trade-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.strategem-card-trade-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(30, 41, 59, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.strategem-card-trade-value img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.strategem-card-hint {
+  font-size: 0.75rem;
+  color: rgba(148, 163, 184, 0.7);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 720px) {
+  .strategem-card-trade-button {
+    width: 34px;
+    height: 34px;
+  }
+}

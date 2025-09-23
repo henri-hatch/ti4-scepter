@@ -53,6 +53,10 @@
   justify-items: center;
 }
 
+.card-inventory-grid--strategems {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
 .card-inventory-empty {
   text-align: center;
   color: rgba(226, 232, 240, 0.75);
@@ -100,5 +104,9 @@
 
   .card-inventory-grid {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+
+  .card-inventory-grid--strategems {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   }
 }

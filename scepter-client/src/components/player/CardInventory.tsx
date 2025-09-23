@@ -6,11 +6,14 @@ import PlayerActionMenu from './PlayerActionMenu'
 import CardDrawModal from './CardDrawModal'
 import ManageActionCardsModal from './ManageActionCardsModal'
 import ManageExplorationCardsModal from './ManageExplorationCardsModal'
+import ManageStrategemsModal from './ManageStrategemsModal'
 import ActionCard from '../cards/ActionCard'
 import ExplorationCard from '../cards/ExplorationCard'
+import StrategemCard from '../cards/StrategemCard'
 import RestoreRelicModal from './RestoreRelicModal'
 import type { PlayerActionCard, ActionCardDefinition } from '../../types/actions'
 import type { ExplorationCardDefinition, PlayerExplorationCard } from '../../types/exploration'
+import type { PlayerStrategem, StrategemDefinition } from '../../types/strategems'
 import { resolveAssetPath } from '../../utils/assets'
 
 function sortByName<T extends { name: string }>(items: T[]): T[] {
@@ -20,29 +23,35 @@ function sortByName<T extends { name: string }>(items: T[]): T[] {
 }
 
 function CardInventory() {
-  const { playerInfo } = useSocket()
+  const { playerInfo, socket } = useSocket()
   const gameName = playerInfo.gameName ?? ''
   const playerId = playerInfo.playerId ?? ''
 
   const [actions, setActions] = useState<PlayerActionCard[]>([])
   const [exploration, setExploration] = useState<PlayerExplorationCard[]>([])
+  const [strategems, setStrategems] = useState<PlayerStrategem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const [actionDefinitions, setActionDefinitions] = useState<ActionCardDefinition[]>([])
   const [explorationDefinitions, setExplorationDefinitions] = useState<ExplorationCardDefinition[]>([])
-  const [definitionsLoaded, setDefinitionsLoaded] = useState({ actions: false, exploration: false })
-  const [definitionsLoading, setDefinitionsLoading] = useState({ actions: false, exploration: false })
+  const [strategemDefinitions, setStrategemDefinitions] = useState<StrategemDefinition[]>([])
+  const [definitionsLoaded, setDefinitionsLoaded] = useState({ actions: false, exploration: false, strategems: false })
+  const [definitionsLoading, setDefinitionsLoading] = useState({ actions: false, exploration: false, strategems: false })
 
   const [actionBusyKey, setActionBusyKey] = useState<string | null>(null)
   const [explorationBusyKey, setExplorationBusyKey] = useState<string | null>(null)
+  const [strategemBusyKey, setStrategemBusyKey] = useState<string | null>(null)
+  const [strategemTradeBusyKey, setStrategemTradeBusyKey] = useState<string | null>(null)
 
   const [pendingActionDelete, setPendingActionDelete] = useState<PlayerActionCard | null>(null)
   const [pendingExplorationDelete, setPendingExplorationDelete] = useState<PlayerExplorationCard | null>(null)
+  const [pendingStrategemDelete, setPendingStrategemDelete] = useState<PlayerStrategem | null>(null)
   const [restoreModalOpen, setRestoreModalOpen] = useState(false)
   const [restoreInitialFragment, setRestoreInitialFragment] = useState<PlayerExplorationCard | null>(null)
   const [manageExplorationOpen, setManageExplorationOpen] = useState(false)
   const [manageRelicsOpen, setManageRelicsOpen] = useState(false)
+  const [manageStrategemsOpen, setManageStrategemsOpen] = useState(false)
 
   const [drawModalOpen, setDrawModalOpen] = useState(false)
   const [manageActionModalOpen, setManageActionModalOpen] = useState(false)
@@ -104,6 +113,23 @@ function CardInventory() {
     setExploration(sortByName(rows))
   }, [gameName, playerId])
 
+  const fetchStrategemCards = useCallback(async () => {
+    if (!gameName || !playerId) {
+      return
+    }
+    const response = await fetch(`/api/game/${encodeURIComponent(gameName)}/player/${encodeURIComponent(playerId)}/strategems`)
+    if (!response.ok) {
+      throw new Error('Failed to load strategems')
+    }
+    const payload = await response.json()
+    const rows: PlayerStrategem[] = (payload.strategems ?? []).map((card: PlayerStrategem) => ({
+      ...card,
+      isExhausted: Boolean(card.isExhausted),
+      tradeGoods: Number(card.tradeGoods ?? 0)
+    }))
+    setStrategems(sortByName(rows))
+  }, [gameName, playerId])
+
   const fetchInventory = useCallback(async () => {
     if (!gameName || !playerId) {
       return
@@ -111,25 +137,62 @@ function CardInventory() {
     setLoading(true)
     setError(null)
     try {
-      await Promise.all([fetchActionCards(), fetchExplorationCards()])
+      await Promise.all([fetchActionCards(), fetchExplorationCards(), fetchStrategemCards()])
     } catch (err) {
       console.error(err)
       setError('Unable to load card inventory. Please try again.')
     } finally {
       setLoading(false)
     }
-  }, [fetchActionCards, fetchExplorationCards, gameName, playerId])
+  }, [fetchActionCards, fetchExplorationCards, fetchStrategemCards, gameName, playerId])
 
   useEffect(() => {
     setActions([])
     setExploration([])
+    setStrategems([])
     setError(null)
-    setDefinitionsLoaded({ actions: false, exploration: false })
-    setDefinitionsLoading({ actions: false, exploration: false })
+    setDefinitionsLoaded({ actions: false, exploration: false, strategems: false })
+    setDefinitionsLoading({ actions: false, exploration: false, strategems: false })
+    setStrategemDefinitions([])
+    setPendingStrategemDelete(null)
+    setStrategemBusyKey(null)
+    setStrategemTradeBusyKey(null)
     if (gameName && playerId) {
       fetchInventory()
     }
   }, [gameName, playerId, fetchInventory])
+
+  useEffect(() => {
+    if (!socket) {
+      return
+    }
+
+    const handleTradeGoodsUpdated = (payload: { gameName?: string; strategem?: StrategemDefinition | PlayerStrategem }) => {
+      if (payload?.gameName && payload.gameName !== gameName) {
+        return
+      }
+      if (!payload?.strategem) {
+        return
+      }
+      const strategem = payload.strategem
+      const tradeGoodsValue = Number(strategem.tradeGoods ?? 0)
+      setStrategems((previous) => previous.map((item) => (
+        item.key === strategem.key
+          ? { ...item, tradeGoods: tradeGoodsValue }
+          : item
+      )))
+      setStrategemDefinitions((previous) => previous.map((item) => (
+        item.key === strategem.key
+          ? { ...item, tradeGoods: tradeGoodsValue }
+          : item
+      )))
+    }
+
+    socket.on('strategem_trade_goods_updated', handleTradeGoodsUpdated)
+    return () => {
+      socket.off('strategem_trade_goods_updated', handleTradeGoodsUpdated)
+    }
+  }, [gameName, socket])
 
   const loadActionDefinitions = useCallback(async () => {
     if (!gameName || !playerId || definitionsLoading.actions) {
@@ -177,6 +240,31 @@ function CardInventory() {
     }
   }, [gameName, playerId, definitionsLoading.exploration])
 
+  const loadStrategemDefinitions = useCallback(async () => {
+    if (!gameName || !playerId || definitionsLoading.strategems) {
+      return
+    }
+    setDefinitionsLoading((prev) => ({ ...prev, strategems: true }))
+    try {
+      const response = await fetch(`/api/game/${encodeURIComponent(gameName)}/player/${encodeURIComponent(playerId)}/strategems/definitions`)
+      if (!response.ok) {
+        throw new Error('Failed to load strategem definitions')
+      }
+      const payload = await response.json()
+      const defs: StrategemDefinition[] = (payload.strategems ?? []).map((item: StrategemDefinition) => ({
+        ...item,
+        tradeGoods: Number(item.tradeGoods ?? 0)
+      }))
+      setStrategemDefinitions(sortByName(defs))
+      setDefinitionsLoaded((prev) => ({ ...prev, strategems: true }))
+    } catch (err) {
+      console.error(err)
+      setError('Unable to load strategem options.')
+    } finally {
+      setDefinitionsLoading((prev) => ({ ...prev, strategems: false }))
+    }
+  }, [gameName, playerId, definitionsLoading.strategems])
+
   const handleToggleAction = async (card: PlayerActionCard) => {
     if (!gameName || !playerId) {
       return
@@ -215,6 +303,25 @@ function CardInventory() {
       const exists = previous.some((item) => item.key === definition.key)
       if (exists) {
         return previous
+      }
+      return sortByName([...previous, definition])
+    })
+  }, [])
+
+  const removeStrategemDefinition = useCallback((definition: StrategemDefinition) => {
+    setStrategemDefinitions((previous) => sortByName(previous.filter((item) => item.key !== definition.key)))
+  }, [])
+
+  const addStrategemDefinitionBack = useCallback((definition: StrategemDefinition) => {
+    setStrategemDefinitions((previous) => {
+      const existingIndex = previous.findIndex((item) => item.key === definition.key)
+      if (existingIndex >= 0) {
+        const clone = [...previous]
+        clone[existingIndex] = {
+          ...clone[existingIndex],
+          tradeGoods: definition.tradeGoods
+        }
+        return sortByName(clone)
       }
       return sortByName([...previous, definition])
     })
@@ -290,6 +397,172 @@ function CardInventory() {
       console.error(err)
     }
   }
+
+  const handleToggleStrategem = async (card: PlayerStrategem) => {
+    if (!gameName || !playerId) {
+      return
+    }
+    setStrategemBusyKey(card.key)
+    setError(null)
+    try {
+      const response = await fetch(
+        `/api/game/${encodeURIComponent(gameName)}/player/${encodeURIComponent(playerId)}/strategems/${encodeURIComponent(card.key)}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isExhausted: !card.isExhausted })
+        }
+      )
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload.error || 'Failed to update strategem')
+      }
+      const updated = payload.strategem as PlayerStrategem | undefined
+      setStrategems((previous) => previous.map((item) => {
+        if (item.key !== card.key) {
+          return item
+        }
+        if (updated) {
+          return {
+            ...item,
+            ...updated,
+            isExhausted: Boolean(updated.isExhausted),
+            tradeGoods: Number(updated.tradeGoods ?? item.tradeGoods)
+          }
+        }
+        return { ...item, isExhausted: !item.isExhausted }
+      }))
+    } catch (err) {
+      console.error(err)
+      setError('Unable to update strategem. Please try again.')
+    } finally {
+      setStrategemBusyKey(null)
+    }
+  }
+
+  const handleAddStrategem = useCallback(async (definition: StrategemDefinition) => {
+    if (!gameName || !playerId) {
+      return
+    }
+    setStrategemBusyKey(definition.key)
+    setError(null)
+    try {
+      const response = await fetch(`/api/game/${encodeURIComponent(gameName)}/player/${encodeURIComponent(playerId)}/strategems`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ strategemKey: definition.key })
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload.error || 'Unable to add strategem')
+      }
+      const savedPayload = (payload.strategem ?? {}) as Partial<PlayerStrategem>
+      const saved: PlayerStrategem = {
+        ...definition,
+        ...savedPayload,
+        isExhausted: Boolean(savedPayload.isExhausted),
+        tradeGoods: Number(savedPayload.tradeGoods ?? definition.tradeGoods ?? 0)
+      }
+      setStrategems((previous) => sortByName([
+        ...previous.filter((item) => item.key !== saved.key),
+        saved
+      ]))
+      removeStrategemDefinition(definition)
+    } catch (err) {
+      console.error(err)
+      const failure = err instanceof Error ? err : new Error('Unable to add strategem.')
+      setError(failure.message)
+      throw failure
+    } finally {
+      setStrategemBusyKey(null)
+    }
+  }, [gameName, playerId, removeStrategemDefinition])
+
+  const removeStrategemCard = useCallback(async (card: PlayerStrategem) => {
+    if (!gameName || !playerId) {
+      return
+    }
+    setStrategemBusyKey(card.key)
+    setError(null)
+    try {
+      const response = await fetch(
+        `/api/game/${encodeURIComponent(gameName)}/player/${encodeURIComponent(playerId)}/strategems/${encodeURIComponent(card.key)}`,
+        { method: 'DELETE' }
+      )
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload.error || 'Failed to delete strategem')
+      }
+      setStrategems((previous) => previous.filter((item) => item.key !== card.key))
+      addStrategemDefinitionBack(card)
+    } catch (err) {
+      console.error(err)
+      setError('Unable to delete strategem. Please try again.')
+      throw err
+    } finally {
+      setStrategemBusyKey(null)
+    }
+  }, [addStrategemDefinitionBack, gameName, playerId])
+
+  const handleDeleteStrategem = async () => {
+    if (!pendingStrategemDelete || !gameName || !playerId) {
+      return
+    }
+    try {
+      await removeStrategemCard(pendingStrategemDelete)
+      setPendingStrategemDelete(null)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleTradeGoodsChange = useCallback(async (card: PlayerStrategem, nextTradeGoods: number) => {
+    if (!gameName) {
+      return
+    }
+    const desired = Math.max(0, Math.round(nextTradeGoods))
+    setStrategemTradeBusyKey(card.key)
+    setError(null)
+    try {
+      const response = await fetch(
+        `/api/game/${encodeURIComponent(gameName)}/strategems/${encodeURIComponent(card.key)}/trade-goods`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tradeGoods: desired })
+        }
+      )
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload.error || 'Failed to update trade goods')
+      }
+      const updated = payload.strategem as StrategemDefinition | undefined
+      if (updated) {
+        const normalisedGoods = Number(updated.tradeGoods ?? desired)
+        setStrategems((previous) => previous.map((item) => (
+          item.key === updated.key
+            ? { ...item, tradeGoods: normalisedGoods }
+            : item
+        )))
+        setStrategemDefinitions((previous) => previous.map((item) => (
+          item.key === updated.key
+            ? { ...item, tradeGoods: normalisedGoods }
+            : item
+        )))
+      } else {
+        setStrategems((previous) => previous.map((item) => (
+          item.key === card.key
+            ? { ...item, tradeGoods: desired }
+            : item
+        )))
+      }
+    } catch (err) {
+      console.error(err)
+      setError('Unable to update trade goods. Please try again.')
+    } finally {
+      setStrategemTradeBusyKey(null)
+    }
+  }, [gameName])
 
   const handleToggleExploration = async (card: PlayerExplorationCard) => {
     if (!gameName || !playerId) {
@@ -489,6 +762,16 @@ function CardInventory() {
         disabled: !gameName || !playerId || definitionsLoading.actions
       },
       {
+        label: definitionsLoading.strategems ? 'Loading…' : 'Manage Strategems',
+        onSelect: async () => {
+          if (!definitionsLoaded.strategems) {
+            await loadStrategemDefinitions()
+          }
+          setManageStrategemsOpen(true)
+        },
+        disabled: !gameName || !playerId || definitionsLoading.strategems
+      },
+      {
         label: definitionsLoading.exploration ? 'Loading…' : 'Manage Exploration Cards',
         onSelect: async () => {
           if (!definitionsLoaded.exploration) {
@@ -509,7 +792,19 @@ function CardInventory() {
         disabled: !gameName || !playerId || definitionsLoading.exploration
       }
     ]
-  ), [definitionsLoaded.actions, definitionsLoaded.exploration, definitionsLoading.actions, definitionsLoading.exploration, gameName, loadActionDefinitions, loadExplorationDefinitions, playerId])
+  ), [
+    definitionsLoaded.actions,
+    definitionsLoaded.exploration,
+    definitionsLoaded.strategems,
+    definitionsLoading.actions,
+    definitionsLoading.exploration,
+    definitionsLoading.strategems,
+    gameName,
+    loadActionDefinitions,
+    loadExplorationDefinitions,
+    loadStrategemDefinitions,
+    playerId
+  ])
 
   return (
     <div className="player-page card-inventory-page">
@@ -520,6 +815,31 @@ function CardInventory() {
 
       {error ? <div className="card-inventory-error">{error}</div> : null}
       {loading ? <div className="card-inventory-status">Loading cards...</div> : null}
+
+      <section className="card-inventory-section">
+        <div className="card-inventory-section-header">
+          <h2>Strategems</h2>
+          <span className="card-inventory-counter">{strategems.length}</span>
+        </div>
+        <hr className="card-inventory-divider" />
+        {strategems.length > 0 ? (
+          <div className="card-inventory-grid card-inventory-grid--strategems">
+            {strategems.map((card) => (
+              <StrategemCard
+                key={card.key}
+                card={card}
+                onToggle={handleToggleStrategem}
+                onRemove={(item) => setPendingStrategemDelete(item)}
+                onTradeGoodsChange={handleTradeGoodsChange}
+                disabled={strategemBusyKey === card.key}
+                tradeGoodsBusy={strategemTradeBusyKey === card.key}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="card-inventory-empty">No strategems assigned yet.</div>
+        )}
+      </section>
 
       <section className="card-inventory-section">
         <div className="card-inventory-section-header">
@@ -599,14 +919,6 @@ function CardInventory() {
 
       <section className="card-inventory-section">
         <div className="card-inventory-section-header">
-          <h2>Strategems</h2>
-        </div>
-        <hr className="card-inventory-divider" />
-        <div className="card-inventory-subtle">Strategem tracking will arrive in a future update.</div>
-      </section>
-
-      <section className="card-inventory-section">
-        <div className="card-inventory-section-header">
           <h2>Relics</h2>
           <span className="card-inventory-counter">{relics.length}</span>
         </div>
@@ -662,6 +974,28 @@ function CardInventory() {
           }
         }}
         busyKey={actionBusyKey}
+      />
+
+      <ManageStrategemsModal
+        isOpen={manageStrategemsOpen}
+        onClose={() => setManageStrategemsOpen(false)}
+        owned={strategems}
+        available={strategemDefinitions}
+        onAdd={async (card) => {
+          try {
+            await handleAddStrategem(card)
+          } catch (err) {
+            console.error(err)
+          }
+        }}
+        onRemove={async (card) => {
+          try {
+            await removeStrategemCard(card)
+          } catch (err) {
+            console.error(err)
+          }
+        }}
+        busyKey={strategemBusyKey}
       />
 
       <ManageExplorationCardsModal
@@ -722,6 +1056,28 @@ function CardInventory() {
         }}
         onRestore={handleRestoreRelic}
       />
+
+      {pendingStrategemDelete ? (
+        <div className="planet-action-dialog" role="dialog" aria-modal="true">
+          <div className="planet-action-content">
+            <h3>Remove Strategem</h3>
+            <p>Remove {pendingStrategemDelete.name} from your board?</p>
+            <div className="planet-action-buttons">
+              <button
+                type="button"
+                className="danger"
+                onClick={handleDeleteStrategem}
+                disabled={strategemBusyKey === pendingStrategemDelete.key}
+              >
+                Delete
+              </button>
+              <button type="button" className="secondary" onClick={() => setPendingStrategemDelete(null)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {pendingActionDelete ? (
         <div className="planet-action-dialog" role="dialog" aria-modal="true">

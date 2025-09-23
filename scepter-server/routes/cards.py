@@ -28,6 +28,18 @@ from components.exploration_catalog import (
   ExplorationCatalogError
 )
 from components.planet_catalog import ensure_planet_tables, get_planet_definition
+from components.strategem_catalog import (
+  ensure_strategem_tables,
+  populate_strategem_definitions,
+  get_strategem_definition,
+  list_player_strategems as fetch_player_strategems,
+  list_available_strategem_definitions,
+  add_player_strategem as assign_player_strategem,
+  update_player_strategem_state as set_player_strategem_state,
+  remove_player_strategem as delete_player_strategem,
+  update_strategem_trade_goods as set_strategem_trade_goods,
+  StrategemCatalogError
+)
 from routes.games import get_game_db_path, update_game_timestamp
 
 logger = logging.getLogger(__name__)
@@ -35,6 +47,7 @@ logger = logging.getLogger(__name__)
 
 ActionRow = Dict[str, Any]
 ExplorationRow = Dict[str, Any]
+StrategemRow = Dict[str, Any]
 
 
 def _ensure_game_database(game_name: str, games_dir: str) -> Tuple[bool, str]:
@@ -64,6 +77,19 @@ def _normalise_exploration_rows(rows: Sequence[ExplorationRow]) -> List[Explorat
     item = dict(row)
     if 'isExhausted' in item:
       item['isExhausted'] = bool(item.get('isExhausted', 0))
+    normalised.append(item)
+  return normalised
+
+
+def _normalise_strategem_rows(rows: Sequence[StrategemRow]) -> List[StrategemRow]:
+  """Convert sqlite integer flags to booleans for strategem cards."""
+  normalised: List[StrategemRow] = []
+  for row in rows:
+    item = dict(row)
+    if 'isExhausted' in item:
+      item['isExhausted'] = bool(item.get('isExhausted', 0))
+    if 'tradeGoods' in item and item['tradeGoods'] is not None:
+      item['tradeGoods'] = int(item['tradeGoods'])
     normalised.append(item)
   return normalised
 
@@ -418,6 +444,163 @@ def remove_player_exploration(
 
   update_game_timestamp(db_path)
   return {"success": True}, 200
+
+
+def list_player_strategems(game_name: str, player_id: str, games_dir: str) -> Tuple[Dict[str, Any], int]:
+  """Return the strategems currently assigned to a player."""
+  valid, db_path = _ensure_game_database(game_name, games_dir)
+  if not valid:
+    return {"error": "Game not found"}, 404
+
+  ensure_strategem_tables(db_path)
+  try:
+    populate_strategem_definitions(db_path)
+    rows = fetch_player_strategems(db_path, player_id)
+  except (StrategemCatalogError, DatabaseError) as exc:
+    logger.error("Failed to load strategems for '%s': %s", game_name, exc)
+    return {"error": "Unable to load strategems"}, 500
+
+  return {"strategems": _normalise_strategem_rows(rows)}, 200
+
+
+def list_player_strategem_definitions(game_name: str, player_id: str, games_dir: str) -> Tuple[Dict[str, Any], int]:
+  """Return strategem definitions that the player does not currently have assigned."""
+  valid, db_path = _ensure_game_database(game_name, games_dir)
+  if not valid:
+    return {"error": "Game not found"}, 404
+
+  try:
+    ensure_strategem_tables(db_path)
+    populate_strategem_definitions(db_path)
+    available = list_available_strategem_definitions(db_path, player_id)
+  except (StrategemCatalogError, DatabaseError) as exc:
+    logger.error("Failed to load strategem definitions for '%s': %s", game_name, exc)
+    return {"error": "Strategem catalog unavailable"}, 500
+
+  return {"strategems": available}, 200
+
+
+def add_player_strategem(
+  game_name: str,
+  player_id: str,
+  strategem_key: str,
+  games_dir: str
+) -> Tuple[Dict[str, Any], int]:
+  """Assign a strategem to a player's board."""
+  valid, db_path = _ensure_game_database(game_name, games_dir)
+  if not valid:
+    return {"error": "Game not found"}, 404
+
+  if not strategem_key:
+    return {"error": "Strategem key is required"}, 400
+
+  try:
+    definition = assign_player_strategem(db_path, player_id, strategem_key)
+  except StrategemCatalogError as exc:
+    logger.error("Strategem catalog error for '%s': %s", game_name, exc)
+    message = str(exc) or "Unable to add strategem"
+    status = 404 if 'not found' in message.lower() else 400
+    return {"error": message}, status
+  except DatabaseError as exc:
+    logger.error("Failed to add strategem '%s' in '%s': %s", strategem_key, game_name, exc)
+    return {"error": "Unable to add strategem"}, 500
+
+  if definition is None:
+    return {"error": "Strategem already assigned"}, 409
+
+  update_game_timestamp(db_path)
+  definition['isExhausted'] = bool(definition.get('isExhausted', False))
+  return {"strategem": definition}, 201
+
+
+def update_player_strategem(
+  game_name: str,
+  player_id: str,
+  strategem_key: str,
+  is_exhausted: bool,
+  games_dir: str
+) -> Tuple[Dict[str, Any], int]:
+  """Update the exhausted state of a strategem on a player's board."""
+  valid, db_path = _ensure_game_database(game_name, games_dir)
+  if not valid:
+    return {"error": "Game not found"}, 404
+
+  ensure_strategem_tables(db_path)
+
+  try:
+    updated = set_player_strategem_state(db_path, player_id, strategem_key, is_exhausted)
+  except StrategemCatalogError as exc:
+    logger.error("Strategem catalog error updating '%s' in '%s': %s", strategem_key, game_name, exc)
+    return {"error": str(exc) or "Unable to update strategem"}, 400
+  except DatabaseError as exc:
+    logger.error("Failed to update strategem '%s' in '%s': %s", strategem_key, game_name, exc)
+    return {"error": "Unable to update strategem"}, 500
+
+  if not updated:
+    return {"error": "Strategem not assigned to player"}, 404
+
+  update_game_timestamp(db_path)
+  card = get_strategem_definition(db_path, strategem_key) or {"key": strategem_key}
+  card['isExhausted'] = is_exhausted
+  return {"strategem": card}, 200
+
+
+def remove_player_strategem(
+  game_name: str,
+  player_id: str,
+  strategem_key: str,
+  games_dir: str
+) -> Tuple[Dict[str, Any], int]:
+  """Remove a strategem from a player's board."""
+  valid, db_path = _ensure_game_database(game_name, games_dir)
+  if not valid:
+    return {"error": "Game not found"}, 404
+
+  ensure_strategem_tables(db_path)
+
+  try:
+    deleted = delete_player_strategem(db_path, player_id, strategem_key)
+  except StrategemCatalogError as exc:
+    logger.error("Strategem catalog error removing '%s' in '%s': %s", strategem_key, game_name, exc)
+    return {"error": str(exc) or "Unable to remove strategem"}, 400
+  except DatabaseError as exc:
+    logger.error("Failed to remove strategem '%s' for player '%s' in '%s': %s", strategem_key, player_id, game_name, exc)
+    return {"error": "Unable to remove strategem"}, 500
+
+  if not deleted:
+    return {"error": "Strategem not assigned to player"}, 404
+
+  update_game_timestamp(db_path)
+  return {"success": True}, 200
+
+
+def update_strategem_trade_goods(
+  game_name: str,
+  strategem_key: str,
+  trade_goods: int,
+  games_dir: str
+) -> Tuple[Dict[str, Any], int]:
+  """Set the trade good count on a strategem for the game."""
+  valid, db_path = _ensure_game_database(game_name, games_dir)
+  if not valid:
+    return {"error": "Game not found"}, 404
+
+  ensure_strategem_tables(db_path)
+
+  try:
+    updated = set_strategem_trade_goods(db_path, strategem_key, int(trade_goods))
+  except StrategemCatalogError as exc:
+    logger.error("Strategem catalog error updating trade goods for '%s' in '%s': %s", strategem_key, game_name, exc)
+    return {"error": str(exc) or "Unable to update trade goods"}, 400
+  except (DatabaseError, ValueError) as exc:
+    logger.error("Failed to update trade goods for strategem '%s' in '%s': %s", strategem_key, game_name, exc)
+    return {"error": "Unable to update trade goods"}, 500
+
+  if not updated:
+    return {"error": "Strategem not found"}, 404
+
+  update_game_timestamp(db_path)
+  return {"strategem": updated}, 200
 
 
 def explore_planet(

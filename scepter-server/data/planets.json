@@ -8,6 +8,7 @@
       "resources": 1,
       "influence": 0,
       "legendary": false,
+      "legendaryAbility": null,
       "assetFront": "planets/abaddon.face.jpg",
       "assetBack": "planets/abaddon.back.jpg"
     },
@@ -19,8 +20,57 @@
       "resources": 1,
       "influence": 3,
       "legendary": false,
+      "legendaryAbility": null,
       "assetFront": "planets/archon_vail.face.jpg",
       "assetBack": "planets/archon_vail.back.jpg"
+    },
+    {
+      "key": "000",
+      "name": "000",
+      "type": "l1z1x",
+      "techSpecialty": null,
+      "resources": 5,
+      "influence": 0,
+      "legendary": false,
+      "legendaryAbility": null,
+      "assetFront": "planets/000.face.jpg",
+      "assetBack": "planets/000.back.jpg"
+    },
+    {
+      "key": "hopes_end",
+      "name": "Hopes End",
+      "type": "Hazardous",
+      "techSpecialty": null,
+      "resources": 3,
+      "influence": 0,
+      "legendary": true,
+      "legendaryAbility": "imperial_arms_vault",
+      "assetFront": "planets/hopes_end.face.jpg",
+      "assetBack": "planets/hopes_end.back.jpg"
+    },
+    {
+      "key": "kraag",
+      "name": "Kraag",
+      "type": "Hazardous",
+      "techSpecialty": null,
+      "resources": 2,
+      "influence": 1,
+      "legendary": false,
+      "legendaryAbility": null,
+      "assetFront": "planets/kraag.face.jpg",
+      "assetBack": "planets/kraag.back.jpg"
+    },
+    {
+      "key": "the_dark",
+      "name": "The Dark",
+      "type": "empyrean",
+      "techSpecialty": null,
+      "resources": 3,
+      "influence": 4,
+      "legendary": false,
+      "legendaryAbility": null,
+      "assetFront": "planets/the_dark.face.jpg",
+      "assetBack": "planets/the_dark.back.jpg"
     }
   ]
 }

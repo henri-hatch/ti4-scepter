@@ -23,7 +23,8 @@ scepter-server/
 │   ├── planet_catalog.py     # Planet seeding helpers
 │   ├── technology_catalog.py # Technology seeding helpers
 │   ├── action_catalog.py     # Action card seeding helpers
-│   └── exploration_catalog.py # Exploration card utilities
+│   ├── exploration_catalog.py # Exploration card utilities
+│   └── strategem_catalog.py   # Strategem catalog utilities
 ├── data/
 │   ├── planets.json       # Base planet catalog used when creating games
 │   ├── technology.json    # Base technology catalog used when creating games
@@ -87,6 +88,14 @@ The server will start on `http://localhost:5000` by default.
 - **PATCH** `/api/game/<game_name>/player/<player_id>/actions/<action_key>` - Toggles exhausted state.
 - **DELETE** `/api/game/<game_name>/player/<player_id>/actions/<action_key>` - Removes the action card.
 - **POST** `/api/game/<game_name>/player/<player_id>/actions/draw` - Returns a random unowned action card.
+
+### Strategems
+- **GET** `/api/game/<game_name>/player/<player_id>/strategems` - Lists strategems assigned to the player.
+- **GET** `/api/game/<game_name>/player/<player_id>/strategems/definitions` - Definitions not on the player's board.
+- **POST** `/api/game/<game_name>/player/<player_id>/strategems` - Assigns a strategem by key.
+- **PATCH** `/api/game/<game_name>/player/<player_id>/strategems/<strategem_key>` - Toggles exhausted state.
+- **DELETE** `/api/game/<game_name>/player/<player_id>/strategems/<strategem_key>` - Removes the strategem.
+- **PATCH** `/api/game/<game_name>/strategems/<strategem_key>/trade-goods` - Sets the trade good counter and broadcasts updates.
 
 ### Exploration & Attachments
 - **GET** `/api/exploration/catalog` - Returns the exploration catalog.
@@ -176,6 +185,22 @@ Each game database contains:
 - `actionKey` - Action card assigned to the player
 - `isExhausted` - Boolean stored as 0/1
 - `acquiredAt` - Timestamp of assignment
+
+### `strategemDefinitions` table
+- `strategemKey` - Catalog key for lookup
+- `name` - Display name
+- `asset` - Relative image path
+
+### `playerStrategems` table
+- `id` - Auto-incrementing primary key
+- `playerId` - Owning player reference
+- `strategemKey` - Strategem assigned to the player
+- `isExhausted` - Boolean stored as 0/1
+- `acquiredAt` - Timestamp of assignment
+
+### `strategemTradeGoods` table
+- `strategemKey` - Strategem reference
+- `tradeGoods` - Integer trade good incentive counter
 
 ### `explorationDefinitions` table
 - `explorationKey` - Catalog key for lookup

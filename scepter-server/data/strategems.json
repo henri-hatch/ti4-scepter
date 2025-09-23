@@ -1,0 +1,44 @@
+{
+  "strategems": [
+    {
+      "key": "leadership",
+      "name": "Leadership",
+      "asset": "strategems/leadership.jpg"
+    },
+    {
+      "key": "diplomacy",
+      "name": "Diplomacy",
+      "asset": "strategems/diplomacy.jpg"
+    },
+    {
+      "key": "politics",
+      "name": "Politics",
+      "asset": "strategems/politics.jpg"
+    },
+    {
+      "key": "construction",
+      "name": "Construction",
+      "asset": "strategems/construction.jpg"
+    },
+    {
+      "key": "trade",
+      "name": "Trade",
+      "asset": "strategems/trade.jpg"
+    },
+    {
+      "key": "warfare",
+      "name": "Warfare",
+      "asset": "strategems/warfare.jpg"
+    },
+    {
+      "key": "technology",
+      "name": "Technology",
+      "asset": "strategems/technology.jpg"
+    },
+    {
+      "key": "imperial",
+      "name": "Imperial",
+      "asset": "strategems/imperial.jpg"
+    }
+  ]
+}
