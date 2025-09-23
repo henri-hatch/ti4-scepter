@@ -3,7 +3,7 @@ import random
 import logging
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from components.database import execute_query, DatabaseError
+from components.database import execute_query, DatabaseError, get_db_connection
 from components.action_catalog import (
   ensure_action_tables,
   populate_action_definitions,
@@ -644,6 +644,116 @@ def remove_attachment_from_planet(
 
   update_game_timestamp(db_path)
   return {"success": True}, 200
+
+
+def restore_relic_from_fragments(
+  game_name: str,
+  player_id: str,
+  fragment_keys: Sequence[str],
+  games_dir: str
+) -> Tuple[Dict[str, Any], int]:
+  """Consume three relic fragments to restore a random relic."""
+  if not fragment_keys or len(fragment_keys) != 3:
+    return {"error": "Exactly three relic fragments are required"}, 400
+
+  unique_keys = [str(key) for key in fragment_keys]
+  if len(set(unique_keys)) != 3:
+    return {"error": "Fragments must be distinct"}, 400
+
+  valid, db_path = _ensure_game_database(game_name, games_dir)
+  if not valid:
+    return {"error": "Game not found"}, 404
+
+  ensure_exploration_tables(db_path)
+
+  placeholders = ','.join('?' for _ in unique_keys)
+  try:
+    populate_exploration_definitions(db_path)
+    rows = execute_query(
+      db_path,
+      f"""
+          SELECT pec.explorationKey AS key,
+                 ed.name,
+                 ed.type,
+                 ed.subtype,
+                 ed.asset
+          FROM playerExplorationCards pec
+          JOIN explorationDefinitions ed ON ed.explorationKey = pec.explorationKey
+          WHERE pec.playerId = ?
+            AND pec.explorationKey IN ({placeholders})
+      """,
+      (player_id, *unique_keys),
+      fetch_all=True
+    ) or []
+  except DatabaseError as exc:
+    logger.error("Failed to validate relic fragments for '%s': %s", game_name, exc)
+    return {"error": "Unable to restore relic"}, 500
+  except ExplorationCatalogError as exc:
+    logger.error("Exploration catalog unavailable during relic restore for '%s': %s", game_name, exc)
+    return {"error": "Exploration catalog unavailable"}, 500
+
+  if len(rows) != 3:
+    return {"error": "Selected relic fragments not found"}, 404
+
+  if any(row.get('subtype') != 'relic_fragment' for row in rows):
+    return {"error": "Only relic fragments can be restored"}, 400
+
+  key_order = {key: index for index, key in enumerate(unique_keys)}
+  rows.sort(key=lambda row: key_order.get(row.get('key'), 0))
+
+  non_frontier_types = {
+    row['type'].lower()
+    for row in rows
+    if row.get('type', '').lower() != 'frontier'
+  }
+  if len(non_frontier_types) > 1:
+    return {"error": "Fragments must share a planet type. Frontier fragments are wild."}, 400
+
+  restored_type = next(iter(non_frontier_types), 'Frontier')
+
+  try:
+    available_relics = list_available_exploration_definitions(db_path, player_id, ['relic'])
+  except (ExplorationCatalogError, DatabaseError) as exc:
+    logger.error("Failed to fetch relic catalog for '%s': %s", game_name, exc)
+    return {"error": "Relic catalog unavailable"}, 500
+
+  if not available_relics:
+    return {"error": "No relics remaining to restore"}, 409
+
+  relic_choice = random.choice(available_relics)
+
+  try:
+    with get_db_connection(db_path) as connection:
+      cursor = connection.cursor()
+      cursor.execute(
+        f"DELETE FROM playerExplorationCards WHERE playerId = ? AND explorationKey IN ({placeholders})",
+        (player_id, *unique_keys)
+      )
+      deleted_count = cursor.rowcount
+      if deleted_count != len(unique_keys):
+        connection.rollback()
+        return {"error": "Selected relic fragments not available"}, 404
+
+      cursor.execute(
+        "INSERT INTO playerExplorationCards (playerId, explorationKey) VALUES (?, ?)",
+        (player_id, relic_choice['key'])
+      )
+      connection.commit()
+  except DatabaseError as exc:
+    logger.error("Failed to restore relic for '%s': %s", game_name, exc)
+    return {"error": "Unable to restore relic"}, 500
+
+  update_game_timestamp(db_path)
+
+  relic_definition = get_exploration_definition(db_path, relic_choice['key']) or relic_choice
+  relic_definition['isExhausted'] = False
+
+  return {
+    "relic": relic_definition,
+    "consumed": unique_keys,
+    "fragments": rows,
+    "restoredType": restored_type.capitalize()
+  }, 201
 
 
 def list_planet_attachments(

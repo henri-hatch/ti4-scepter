@@ -8,11 +8,23 @@ type ExplorationCardProps = {
   onToggle?: (card: PlayerExplorationCard) => void
   onRemove: (card: PlayerExplorationCard) => void
   disabled?: boolean
+  onSecondaryAction?: (card: PlayerExplorationCard) => void
+  secondaryActionLabel?: string
+  showRemoveButton?: boolean
 }
 
-function ExplorationCard({ card, onToggle, onRemove, disabled = false }: ExplorationCardProps) {
+function ExplorationCard({
+  card,
+  onToggle,
+  onRemove,
+  disabled = false,
+  onSecondaryAction,
+  secondaryActionLabel,
+  showRemoveButton = false
+}: ExplorationCardProps) {
   const front = resolveAssetPath(card.asset)
   const canToggle = card.subtype === 'action' && Boolean(onToggle)
+  const secondaryHandler = onSecondaryAction ?? onRemove
 
   const handlePrimary = () => {
     if (!canToggle || disabled) {
@@ -22,10 +34,10 @@ function ExplorationCard({ card, onToggle, onRemove, disabled = false }: Explora
   }
 
   const handleSecondary = () => {
-    if (disabled) {
+    if (disabled || !secondaryHandler) {
       return
     }
-    onRemove(card)
+    secondaryHandler(card)
   }
 
   return (
@@ -36,7 +48,7 @@ function ExplorationCard({ card, onToggle, onRemove, disabled = false }: Explora
         alt={`${card.name} exploration card`}
         isFlipped={canToggle ? card.isExhausted : false}
         onPrimaryAction={canToggle ? handlePrimary : undefined}
-        onSecondaryAction={handleSecondary}
+        onSecondaryAction={(onSecondaryAction || showRemoveButton) ? handleSecondary : undefined}
         className={`exploration-card exploration-card--${card.subtype}`}
       />
       <div className="exploration-card-meta">
@@ -47,6 +59,17 @@ function ExplorationCard({ card, onToggle, onRemove, disabled = false }: Explora
             {card.subtype.replace('_', ' ')}
           </span>
         </div>
+        {secondaryActionLabel ? <div className="exploration-card-hint">{secondaryActionLabel}</div> : null}
+        {showRemoveButton ? (
+          <button
+            type="button"
+            className="exploration-card-remove"
+            onClick={() => onRemove(card)}
+            disabled={disabled}
+          >
+            Remove
+          </button>
+        ) : null}
       </div>
     </div>
   )

@@ -95,6 +95,7 @@ The server will start on `http://localhost:5000` by default.
 - **POST** `/api/game/<game_name>/player/<player_id>/exploration` - Adds an exploration card to the player's inventory.
 - **PATCH** `/api/game/<game_name>/player/<player_id>/exploration/<exploration_key>` - Toggles exhausted state for exploration actions.
 - **DELETE** `/api/game/<game_name>/player/<player_id>/exploration/<exploration_key>` - Removes the exploration card.
+- **POST** `/api/game/<game_name>/player/<player_id>/relics/restore` - Consumes three matching relic fragments (Frontier counts wild) and grants a random relic.
 - **POST** `/api/game/<game_name>/player/<player_id>/planets/<planet_key>/explore` - Resolves an exploration draw for the planet type.
 - **POST** `/api/game/<game_name>/player/<player_id>/planets/<planet_key>/attachments` - Attaches an exploration card to the planet.
 - **DELETE** `/api/game/<game_name>/player/<player_id>/planets/<planet_key>/attachments/<exploration_key>` - Removes the attachment.

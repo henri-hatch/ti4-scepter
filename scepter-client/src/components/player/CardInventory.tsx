@@ -4,10 +4,11 @@ import '../../styles/CardInventory.css'
 import { useSocket } from '../../contexts/useSocket'
 import PlayerActionMenu from './PlayerActionMenu'
 import CardDrawModal from './CardDrawModal'
-import AddActionCardModal from './AddActionCardModal'
-import AddExplorationCardModal from './AddExplorationCardModal'
+import ManageActionCardsModal from './ManageActionCardsModal'
+import ManageExplorationCardsModal from './ManageExplorationCardsModal'
 import ActionCard from '../cards/ActionCard'
 import ExplorationCard from '../cards/ExplorationCard'
+import RestoreRelicModal from './RestoreRelicModal'
 import type { PlayerActionCard, ActionCardDefinition } from '../../types/actions'
 import type { ExplorationCardDefinition, PlayerExplorationCard } from '../../types/exploration'
 import { resolveAssetPath } from '../../utils/assets'
@@ -38,10 +39,13 @@ function CardInventory() {
 
   const [pendingActionDelete, setPendingActionDelete] = useState<PlayerActionCard | null>(null)
   const [pendingExplorationDelete, setPendingExplorationDelete] = useState<PlayerExplorationCard | null>(null)
+  const [restoreModalOpen, setRestoreModalOpen] = useState(false)
+  const [restoreInitialFragment, setRestoreInitialFragment] = useState<PlayerExplorationCard | null>(null)
+  const [manageExplorationOpen, setManageExplorationOpen] = useState(false)
+  const [manageRelicsOpen, setManageRelicsOpen] = useState(false)
 
   const [drawModalOpen, setDrawModalOpen] = useState(false)
-  const [addActionModalOpen, setAddActionModalOpen] = useState(false)
-  const [addExplorationModalOpen, setAddExplorationModalOpen] = useState(false)
+  const [manageActionModalOpen, setManageActionModalOpen] = useState(false)
 
   const explorationActions = useMemo(
     () => exploration.filter((card) => card.subtype === 'action'),
@@ -51,6 +55,21 @@ function CardInventory() {
   const relicFragments = useMemo(
     () => exploration.filter((card) => card.subtype === 'relic_fragment'),
     [exploration]
+  )
+
+  const relics = useMemo(
+    () => exploration.filter((card) => card.subtype === 'relic'),
+    [exploration]
+  )
+
+  const manageableExploration = useMemo(
+    () => exploration.filter((card) => card.subtype === 'action' || card.subtype === 'relic_fragment'),
+    [exploration]
+  )
+
+  const availableRelicDefinitions = useMemo(
+    () => explorationDefinitions.filter((card) => card.subtype === 'relic'),
+    [explorationDefinitions]
   )
 
   const fetchActionCards = useCallback(async () => {
@@ -141,14 +160,14 @@ function CardInventory() {
     setDefinitionsLoading((prev) => ({ ...prev, exploration: true }))
     try {
       const response = await fetch(
-        `/api/game/${encodeURIComponent(gameName)}/player/${encodeURIComponent(playerId)}/exploration/definitions?subtypes=action,relic_fragment`
+        `/api/game/${encodeURIComponent(gameName)}/player/${encodeURIComponent(playerId)}/exploration/definitions?subtypes=action,relic_fragment,relic`
       )
       if (!response.ok) {
         throw new Error('Failed to load exploration definitions')
       }
       const payload = await response.json()
       const defs: ExplorationCardDefinition[] = payload.exploration ?? []
-      setExplorationDefinitions(defs)
+      setExplorationDefinitions(sortByName(defs))
       setDefinitionsLoaded((prev) => ({ ...prev, exploration: true }))
     } catch (err) {
       console.error(err)
@@ -187,11 +206,11 @@ function CardInventory() {
     }
   }
 
-  const removeActionDefinition = (definition: ActionCardDefinition) => {
+  const removeActionDefinition = useCallback((definition: ActionCardDefinition) => {
     setActionDefinitions((previous) => sortByName(previous.filter((item) => item.key !== definition.key)))
-  }
+  }, [])
 
-  const addActionDefinitionBack = (definition: ActionCardDefinition) => {
+  const addActionDefinitionBack = useCallback((definition: ActionCardDefinition) => {
     setActionDefinitions((previous) => {
       const exists = previous.some((item) => item.key === definition.key)
       if (exists) {
@@ -199,7 +218,7 @@ function CardInventory() {
       }
       return sortByName([...previous, definition])
     })
-  }
+  }, [])
 
   const handleAddAction = useCallback(async (definition: ActionCardDefinition) => {
     if (!gameName || !playerId) {
@@ -233,30 +252,42 @@ function CardInventory() {
     } finally {
       setActionBusyKey(null)
     }
-  }, [gameName, playerId])
+  }, [gameName, playerId, removeActionDefinition])
 
-  const handleDeleteAction = async () => {
-    if (!pendingActionDelete || !gameName || !playerId) {
+  const removeActionCard = useCallback(async (card: PlayerActionCard) => {
+    if (!gameName || !playerId) {
       return
     }
-    setActionBusyKey(pendingActionDelete.key)
+    setActionBusyKey(card.key)
     setError(null)
     try {
       const response = await fetch(
-        `/api/game/${encodeURIComponent(gameName)}/player/${encodeURIComponent(playerId)}/actions/${encodeURIComponent(pendingActionDelete.key)}`,
+        `/api/game/${encodeURIComponent(gameName)}/player/${encodeURIComponent(playerId)}/actions/${encodeURIComponent(card.key)}`,
         { method: 'DELETE' }
       )
       if (!response.ok) {
         throw new Error('Failed to delete action card')
       }
-      setActions((previous) => previous.filter((item) => item.key !== pendingActionDelete.key))
-      addActionDefinitionBack(pendingActionDelete)
-      setPendingActionDelete(null)
+      setActions((previous) => previous.filter((item) => item.key !== card.key))
+      addActionDefinitionBack(card)
     } catch (err) {
       console.error(err)
       setError('Unable to delete action card. Please try again.')
+      throw err
     } finally {
       setActionBusyKey(null)
+    }
+  }, [addActionDefinitionBack, gameName, playerId])
+
+  const handleDeleteAction = async () => {
+    if (!pendingActionDelete || !gameName || !playerId) {
+      return
+    }
+    try {
+      await removeActionCard(pendingActionDelete)
+      setPendingActionDelete(null)
+    } catch (err) {
+      console.error(err)
     }
   }
 
@@ -292,11 +323,11 @@ function CardInventory() {
     }
   }
 
-  const removeExplorationDefinition = (definition: ExplorationCardDefinition) => {
+  const removeExplorationDefinition = useCallback((definition: ExplorationCardDefinition) => {
     setExplorationDefinitions((previous) => previous.filter((item) => item.key !== definition.key))
-  }
+  }, [])
 
-  const addExplorationDefinitionBack = (definition: ExplorationCardDefinition) => {
+  const addExplorationDefinitionBack = useCallback((definition: ExplorationCardDefinition) => {
     setExplorationDefinitions((previous) => {
       const exists = previous.some((item) => item.key === definition.key)
       if (exists) {
@@ -304,7 +335,7 @@ function CardInventory() {
       }
       return sortByName([...previous, definition])
     })
-  }
+  }, [])
 
   const handleAddExploration = useCallback(async (definition: ExplorationCardDefinition) => {
     if (!gameName || !playerId) {
@@ -338,30 +369,86 @@ function CardInventory() {
     } finally {
       setExplorationBusyKey(null)
     }
-  }, [gameName, playerId])
+  }, [gameName, playerId, removeExplorationDefinition])
 
-  const handleDeleteExploration = async () => {
-    if (!pendingExplorationDelete || !gameName || !playerId) {
+  const handleRestoreRelic = useCallback(async (fragmentKeys: string[]) => {
+    if (!gameName || !playerId) {
+      throw new Error('Game not ready')
+    }
+
+    const response = await fetch(`/api/game/${encodeURIComponent(gameName)}/player/${encodeURIComponent(playerId)}/relics/restore`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fragmentKeys })
+    })
+
+    const payload = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      throw new Error(payload.error || 'Unable to restore relic')
+    }
+
+    const relic = payload.relic as PlayerExplorationCard | undefined
+    const consumedKeys: string[] = Array.isArray(payload.consumed) ? payload.consumed : fragmentKeys
+
+    if (!relic) {
+      throw new Error('Relic restoration did not return a relic card')
+    }
+
+    const normalisedRelic: PlayerExplorationCard = {
+      ...relic,
+      isExhausted: Boolean(relic.isExhausted)
+    }
+
+    setExploration((previous) => {
+      const remaining = previous.filter((card) => !consumedKeys.includes(card.key))
+      return sortByName([...remaining, normalisedRelic])
+    })
+    removeExplorationDefinition(normalisedRelic)
+
+    const fragmentsFromPayload: ExplorationCardDefinition[] = Array.isArray(payload.fragments)
+      ? payload.fragments
+      : []
+    fragmentsFromPayload.forEach((fragment) => {
+      addExplorationDefinitionBack(fragment)
+    })
+
+    return normalisedRelic
+  }, [addExplorationDefinitionBack, gameName, playerId, removeExplorationDefinition])
+
+  const removeExplorationCard = useCallback(async (card: PlayerExplorationCard) => {
+    if (!gameName || !playerId) {
       return
     }
-    setExplorationBusyKey(pendingExplorationDelete.key)
+    setExplorationBusyKey(card.key)
     setError(null)
     try {
       const response = await fetch(
-        `/api/game/${encodeURIComponent(gameName)}/player/${encodeURIComponent(playerId)}/exploration/${encodeURIComponent(pendingExplorationDelete.key)}`,
+        `/api/game/${encodeURIComponent(gameName)}/player/${encodeURIComponent(playerId)}/exploration/${encodeURIComponent(card.key)}`,
         { method: 'DELETE' }
       )
       if (!response.ok) {
         throw new Error('Failed to delete exploration card')
       }
-      setExploration((previous) => previous.filter((item) => item.key !== pendingExplorationDelete.key))
-      addExplorationDefinitionBack(pendingExplorationDelete)
-      setPendingExplorationDelete(null)
+      setExploration((previous) => previous.filter((item) => item.key !== card.key))
+      addExplorationDefinitionBack(card)
     } catch (err) {
       console.error(err)
       setError('Unable to delete exploration card. Please try again.')
+      throw err
     } finally {
       setExplorationBusyKey(null)
+    }
+  }, [addExplorationDefinitionBack, gameName, playerId])
+
+  const handleDeleteExploration = async () => {
+    if (!pendingExplorationDelete || !gameName || !playerId) {
+      return
+    }
+    try {
+      await removeExplorationCard(pendingExplorationDelete)
+      setPendingExplorationDelete(null)
+    } catch (err) {
+      console.error(err)
     }
   }
 
@@ -392,22 +479,32 @@ function CardInventory() {
         disabled: !gameName || !playerId
       },
       {
-        label: definitionsLoading.actions ? 'Loading…' : 'Add Action Card',
+        label: definitionsLoading.actions ? 'Loading…' : 'Manage Action Cards',
         onSelect: async () => {
           if (!definitionsLoaded.actions) {
             await loadActionDefinitions()
           }
-          setAddActionModalOpen(true)
+          setManageActionModalOpen(true)
         },
         disabled: !gameName || !playerId || definitionsLoading.actions
       },
       {
-        label: definitionsLoading.exploration ? 'Loading…' : 'Add Exploration Card',
+        label: definitionsLoading.exploration ? 'Loading…' : 'Manage Exploration Cards',
         onSelect: async () => {
           if (!definitionsLoaded.exploration) {
             await loadExplorationDefinitions()
           }
-          setAddExplorationModalOpen(true)
+          setManageExplorationOpen(true)
+        },
+        disabled: !gameName || !playerId || definitionsLoading.exploration
+      },
+      {
+        label: definitionsLoading.exploration ? 'Loading…' : 'Manage Relics',
+        onSelect: async () => {
+          if (!definitionsLoaded.exploration) {
+            await loadExplorationDefinitions()
+          }
+          setManageRelicsOpen(true)
         },
         disabled: !gameName || !playerId || definitionsLoading.exploration
       }
@@ -461,6 +558,8 @@ function CardInventory() {
                 card={card}
                 onToggle={handleToggleExploration}
                 onRemove={(item) => setPendingExplorationDelete(item)}
+                onSecondaryAction={(item) => setPendingExplorationDelete(item)}
+                secondaryActionLabel="Hold or right-click to remove"
                 disabled={explorationBusyKey === card.key}
               />
             ))}
@@ -482,6 +581,12 @@ function CardInventory() {
               <ExplorationCard
                 key={card.key}
                 card={card}
+                onSecondaryAction={(item) => {
+                  setRestoreInitialFragment(item)
+                  setRestoreModalOpen(true)
+                }}
+                secondaryActionLabel="Hold or right-click to restore"
+                showRemoveButton
                 onRemove={(item) => setPendingExplorationDelete(item)}
                 disabled={explorationBusyKey === card.key}
               />
@@ -503,9 +608,25 @@ function CardInventory() {
       <section className="card-inventory-section">
         <div className="card-inventory-section-header">
           <h2>Relics</h2>
+          <span className="card-inventory-counter">{relics.length}</span>
         </div>
         <hr className="card-inventory-divider" />
-        <div className="card-inventory-subtle">Relics are not yet implemented in this view.</div>
+        {relics.length > 0 ? (
+          <div className="card-inventory-grid">
+            {relics.map((card) => (
+              <ExplorationCard
+                key={card.key}
+                card={card}
+                onSecondaryAction={(item) => setPendingExplorationDelete(item)}
+                onRemove={(item) => setPendingExplorationDelete(item)}
+                secondaryActionLabel="Hold or right-click to remove"
+                disabled={explorationBusyKey === card.key}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="card-inventory-empty">No relics restored yet.</div>
+        )}
       </section>
 
       <PlayerActionMenu options={actionMenuOptions} ariaLabel="Card inventory actions" />
@@ -521,34 +642,85 @@ function CardInventory() {
         )}
       />
 
-      <AddActionCardModal
-        isOpen={addActionModalOpen}
-        onClose={() => setAddActionModalOpen(false)}
-        actions={actionDefinitions}
+      <ManageActionCardsModal
+        isOpen={manageActionModalOpen}
+        onClose={() => setManageActionModalOpen(false)}
+        owned={actions}
+        available={actionDefinitions}
         onAdd={async (card) => {
           try {
             await handleAddAction(card)
-            setAddActionModalOpen(false)
           } catch (err) {
-            console.debug('Add action card aborted', err)
+            console.error(err)
           }
         }}
-        disabled={Boolean(actionBusyKey)}
+        onRemove={async (card) => {
+          try {
+            await removeActionCard(card)
+          } catch (err) {
+            console.error(err)
+          }
+        }}
+        busyKey={actionBusyKey}
       />
 
-      <AddExplorationCardModal
-        isOpen={addExplorationModalOpen}
-        onClose={() => setAddExplorationModalOpen(false)}
-        cards={explorationDefinitions}
+      <ManageExplorationCardsModal
+        isOpen={manageExplorationOpen}
+        title="Manage Exploration Cards"
+        onClose={() => setManageExplorationOpen(false)}
+        owned={manageableExploration}
+        available={explorationDefinitions}
         onAdd={async (card) => {
           try {
             await handleAddExploration(card)
-            setAddExplorationModalOpen(false)
           } catch (err) {
-            console.debug('Add exploration card aborted', err)
+            console.error(err)
           }
         }}
-        disabled={Boolean(explorationBusyKey)}
+        onRemove={async (card) => {
+          try {
+            await removeExplorationCard(card)
+          } catch (err) {
+            console.error(err)
+          }
+        }}
+        busyKey={explorationBusyKey}
+        subtypes={['action', 'relic_fragment']}
+      />
+
+      <ManageExplorationCardsModal
+        isOpen={manageRelicsOpen}
+        title="Manage Relics"
+        onClose={() => setManageRelicsOpen(false)}
+        owned={relics}
+        available={availableRelicDefinitions}
+        onAdd={async (card) => {
+          try {
+            await handleAddExploration(card)
+          } catch (err) {
+            console.error(err)
+          }
+        }}
+        onRemove={async (card) => {
+          try {
+            await removeExplorationCard(card)
+          } catch (err) {
+            console.error(err)
+          }
+        }}
+        busyKey={explorationBusyKey}
+        subtypes={['relic']}
+      />
+
+      <RestoreRelicModal
+        isOpen={restoreModalOpen}
+        fragments={relicFragments}
+        initialFragment={restoreInitialFragment}
+        onClose={() => {
+          setRestoreModalOpen(false)
+          setRestoreInitialFragment(null)
+        }}
+        onRestore={handleRestoreRelic}
       />
 
       {pendingActionDelete ? (

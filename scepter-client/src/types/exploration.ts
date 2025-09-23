@@ -1,5 +1,5 @@
-export type ExplorationSubtype = 'attach' | 'action' | 'relic_fragment'
-export type ExplorationType = 'Cultural' | 'Hazardous' | 'Industrial' | 'Frontier' | string
+export type ExplorationSubtype = 'attach' | 'action' | 'relic_fragment' | 'relic'
+export type ExplorationType = 'Cultural' | 'Hazardous' | 'Industrial' | 'Frontier' | 'Relic' | string
 
 export interface ExplorationCardDefinition {
   key: string

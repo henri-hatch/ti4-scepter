@@ -1,0 +1,361 @@
+.restore-relic-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  z-index: 1300;
+}
+
+.restore-relic-modal {
+  width: min(680px, 100%);
+  background: rgba(17, 24, 39, 0.95);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.55);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  max-height: min(90vh, 720px);
+}
+
+.restore-relic-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.2rem 1.6rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.restore-relic-header h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.restore-relic-close {
+  background: transparent;
+  border: none;
+  color: rgba(226, 232, 240, 0.7);
+  font-size: 1.8rem;
+  cursor: pointer;
+}
+
+.restore-relic-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.restore-relic-body {
+  padding: 1.5rem 1.6rem;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.restore-relic-instructions {
+  margin: 0;
+  color: rgba(226, 232, 240, 0.78);
+  line-height: 1.5;
+}
+
+.restore-relic-empty {
+  text-align: center;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.restore-relic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1rem;
+}
+
+.restore-relic-card {
+  background: rgba(30, 41, 59, 0.75);
+  border: 1px solid transparent;
+  border-radius: 14px;
+  overflow: hidden;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition:
+    transform 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.restore-relic-card img {
+  width: 100%;
+  aspect-ratio: 63 / 88;
+  object-fit: cover;
+}
+
+.restore-relic-card-label {
+  padding: 0.8rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.6) 100%);
+}
+
+.restore-relic-card-name {
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+}
+
+.restore-relic-card-type {
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.restore-relic-card.is-selected {
+  border-color: rgba(59, 130, 246, 0.65);
+  box-shadow:
+    0 16px 40px rgba(59, 130, 246, 0.25),
+    0 0 0 1px rgba(59, 130, 246, 0.35);
+  transform: translateY(-4px);
+}
+
+.restore-relic-card:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.restore-relic-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2rem;
+  padding: 1.5rem 0;
+  min-height: 260px;
+  opacity: 0;
+  transform: scale(0.92);
+  transition:
+    opacity 0.45s ease,
+    transform 0.45s ease;
+}
+
+.restore-relic-stage.focus,
+.restore-relic-stage.merging,
+.restore-relic-stage.revealed {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.restore-relic-stage-fragments {
+  display: flex;
+  gap: 1rem;
+  position: relative;
+  z-index: 2;
+  transform-origin: center;
+}
+
+.restore-relic-stage-fragment {
+  width: 90px;
+  aspect-ratio: 63 / 88;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow:
+    0 12px 28px rgba(15, 23, 42, 0.6),
+    0 0 0 1px rgba(148, 163, 184, 0.25);
+}
+
+.restore-relic-stage-fragment img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.restore-relic-stage.focus .restore-relic-stage-fragment {
+  animation: relic-fragment-hover 0.9s ease-in-out infinite alternate;
+}
+
+.restore-relic-stage.merging .restore-relic-stage-fragments {
+  animation: relic-fragments-collapse 0.45s ease forwards;
+}
+
+.restore-relic-stage-effect {
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.55), rgba(37, 99, 235, 0));
+  filter: blur(6px);
+  opacity: 0;
+  transform: scale(0.7);
+  transition:
+    opacity 0.45s ease,
+    transform 0.45s ease;
+}
+
+.restore-relic-stage.focus .restore-relic-stage-effect {
+  opacity: 0.85;
+  transform: scale(1);
+  animation: relic-flash 0.9s ease-in-out infinite;
+}
+
+.restore-relic-stage.merging .restore-relic-stage-effect {
+  opacity: 0.95;
+  transform: scale(0.8);
+  animation: relic-flash-merge 0.45s ease forwards;
+}
+
+.restore-relic-stage.revealed .restore-relic-stage-effect {
+  opacity: 0.45;
+  transform: scale(1.08);
+  filter: blur(12px);
+}
+
+.restore-relic-stage-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+  position: relative;
+  z-index: 3;
+  animation: relic-reveal 0.5s ease forwards;
+}
+
+.restore-relic-stage-result img {
+  width: min(200px, 60vw);
+  border-radius: 16px;
+  box-shadow:
+    0 24px 60px rgba(30, 64, 175, 0.35),
+    0 0 0 1px rgba(191, 219, 254, 0.35);
+}
+
+.restore-relic-stage-caption {
+  font-size: 0.9rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(224, 231, 255, 0.85);
+  text-align: center;
+}
+
+.restore-relic-footer {
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  padding: 1.2rem 1.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.restore-relic-hint {
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.85);
+}
+
+.restore-relic-error {
+  font-size: 0.85rem;
+  color: #fca5a5;
+  text-align: center;
+}
+
+.restore-relic-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.8rem;
+}
+
+.restore-relic-actions button {
+  padding: 0.7rem 1.5rem;
+  border-radius: 10px;
+  border: none;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.restore-relic-actions .secondary {
+  background: rgba(148, 163, 184, 0.25);
+  color: rgba(226, 232, 240, 0.92);
+}
+
+.restore-relic-actions .primary {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.85), rgba(37, 99, 235, 0.95));
+  color: #fff;
+}
+
+.restore-relic-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@keyframes relic-fragment-hover {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes relic-flash {
+  0% {
+    opacity: 0.6;
+    box-shadow: 0 0 30px rgba(96, 165, 250, 0.35);
+  }
+  50% {
+    opacity: 0.9;
+    box-shadow: 0 0 60px rgba(96, 165, 250, 0.6);
+  }
+  100% {
+    opacity: 0.6;
+    box-shadow: 0 0 30px rgba(96, 165, 250, 0.35);
+  }
+}
+
+@keyframes relic-flash-merge {
+  0% {
+    opacity: 0.8;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 0.2;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes relic-fragments-collapse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+
+@keyframes relic-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 720px) {
+  .restore-relic-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+
+  .restore-relic-stage-fragment {
+    width: 76px;
+  }
+}

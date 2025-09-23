@@ -38,7 +38,8 @@ from routes.cards import (
     explore_planet,
     add_attachment_to_planet,
     remove_attachment_from_planet,
-    list_planet_attachments
+    list_planet_attachments,
+    restore_relic_from_fragments
 )
 from components.planet_catalog import PlanetCatalogError
 from components.technology_catalog import TechnologyCatalogError
@@ -447,6 +448,18 @@ def patch_player_exploration(game_name, player_id, exploration_key):
 def delete_player_exploration(game_name, player_id, exploration_key):
     """Remove an exploration card from a player."""
     response, status = remove_player_exploration(game_name, player_id, exploration_key, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/relics/restore', methods=['POST'])
+def restore_player_relic(game_name, player_id):
+    """Consume relic fragments to restore a relic."""
+    data = request.get_json(silent=True) or {}
+    fragment_keys = data.get('fragmentKeys')
+    if not isinstance(fragment_keys, list):
+        fragment_keys = []
+
+    response, status = restore_relic_from_fragments(game_name, player_id, fragment_keys, GAMES_DIR)
     return jsonify(response), status
 
 
