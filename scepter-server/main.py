@@ -41,6 +41,11 @@ from routes.cards import (
     update_player_strategem,
     remove_player_strategem,
     update_strategem_trade_goods,
+    list_player_objectives,
+    list_player_objective_definitions,
+    add_player_objective,
+    update_player_objective,
+    remove_player_objective,
     explore_planet,
     add_attachment_to_planet,
     remove_attachment_from_planet,
@@ -514,6 +519,72 @@ def patch_strategem_trade_goods(game_name, strategem_key):
         }
         socketio.emit('strategem_trade_goods_updated', payload, room=game_name)
 
+
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/objectives', methods=['GET'])
+def get_player_objectives(game_name, player_id):
+    """Return the objectives currently assigned to the player."""
+    response, status = list_player_objectives(game_name, player_id, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/objectives/definitions', methods=['GET'])
+def get_player_objective_definitions(game_name, player_id):
+    """Return objective definitions available for the player."""
+    response, status = list_player_objective_definitions(game_name, player_id, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/objectives', methods=['POST'])
+def create_player_objective(game_name, player_id):
+    """Assign an objective to the player's board."""
+    data = request.get_json(silent=True) or {}
+    response, status = add_player_objective(game_name, player_id, data.get('objectiveKey'), GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/objectives/<objective_key>', methods=['PATCH'])
+def patch_player_objective(game_name, player_id, objective_key):
+    """Update the completion state of an objective for the player."""
+    data = request.get_json(silent=True) or {}
+    if 'isCompleted' not in data:
+        return jsonify({"error": "isCompleted is required"}), 400
+
+    is_completed = bool(data.get('isCompleted'))
+    response, status = update_player_objective(
+        game_name,
+        player_id,
+        objective_key,
+        is_completed,
+        GAMES_DIR
+    )
+
+    if status == 200 and isinstance(response, dict):
+        objective_payload = response.get('objective') if isinstance(response.get('objective'), dict) else {}
+        if objective_payload.get('isCompleted'):
+            socketio.emit(
+                'objective_completed',
+                {
+                    'gameName': game_name,
+                    'playerId': player_id,
+                    'playerName': response.get('playerName', player_id),
+                    'objectiveKey': objective_key,
+                    'objectiveName': objective_payload.get('name', objective_key),
+                    'victoryPoints': objective_payload.get('victoryPoints', 0),
+                    'totalVictoryPoints': response.get('victoryPoints', 0)
+                },
+                room=game_name
+            )
+
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/objectives/<objective_key>', methods=['DELETE'])
+def delete_player_objective_endpoint(game_name, player_id, objective_key):
+    """Remove an objective from the player's board."""
+    response, status = remove_player_objective(game_name, player_id, objective_key, GAMES_DIR)
     return jsonify(response), status
 
 

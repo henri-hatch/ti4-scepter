@@ -24,12 +24,14 @@ scepter-server/
 │   ├── technology_catalog.py # Technology seeding helpers
 │   ├── action_catalog.py     # Action card seeding helpers
 │   ├── exploration_catalog.py # Exploration card utilities
-│   └── strategem_catalog.py   # Strategem catalog utilities
+│   ├── strategem_catalog.py   # Strategem catalog utilities
+│   └── objective_catalog.py   # Objective catalog utilities
 ├── data/
 │   ├── planets.json       # Base planet catalog used when creating games
 │   ├── technology.json    # Base technology catalog used when creating games
 │   ├── actions.json       # Action card catalog
-│   └── exploration.json   # Exploration card catalog
+│   ├── exploration.json   # Exploration card catalog
+│   └── objectives.json    # Objective card catalog
 ├── routes/
 │   ├── games.py         # Game-related routes and logic
 │   ├── planets.py       # Planet inventory endpoints
@@ -96,6 +98,13 @@ The server will start on `http://localhost:5000` by default.
 - **PATCH** `/api/game/<game_name>/player/<player_id>/strategems/<strategem_key>` - Toggles exhausted state.
 - **DELETE** `/api/game/<game_name>/player/<player_id>/strategems/<strategem_key>` - Removes the strategem.
 - **PATCH** `/api/game/<game_name>/strategems/<strategem_key>/trade-goods` - Sets the trade good counter and broadcasts updates.
+
+### Objectives
+- **GET** `/api/game/<game_name>/player/<player_id>/objectives` - Lists objectives assigned to the player.
+- **GET** `/api/game/<game_name>/player/<player_id>/objectives/definitions` - Definitions still available to claim.
+- **POST** `/api/game/<game_name>/player/<player_id>/objectives` - Adds an objective to the player's board.
+- **PATCH** `/api/game/<game_name>/player/<player_id>/objectives/<objective_key>` - Marks the objective as completed or uncompleted and updates victory points.
+- **DELETE** `/api/game/<game_name>/player/<player_id>/objectives/<objective_key>` - Removes the objective and refunds any victory points it granted.
 
 ### Exploration & Attachments
 - **GET** `/api/exploration/catalog` - Returns the exploration catalog.
@@ -201,6 +210,21 @@ Each game database contains:
 ### `strategemTradeGoods` table
 - `strategemKey` - Strategem reference
 - `tradeGoods` - Integer trade good incentive counter
+
+
+### `objectiveDefinitions` table
+- `objectiveKey` - Catalog key for lookup
+- `name` - Display name
+- `type` - `public_tier1`, `public_tier2`, or `secret`
+- `victoryPoints` - Victory points granted when the objective is scored
+- `asset` - Relative image path
+
+### `playerObjectives` table
+- `id` - Auto-incrementing primary key
+- `playerId` - Owning player reference
+- `objectiveKey` - Objective assigned to the player
+- `isCompleted` - Boolean stored as 0/1
+- `completedAt` - Timestamp when the objective was completed (null if unscored)
 
 ### `explorationDefinitions` table
 - `explorationKey` - Catalog key for lookup

@@ -13,6 +13,15 @@ interface LogEntry {
   type: 'info' | 'join' | 'leave' | 'error'
 }
 
+interface ObjectiveCompletedPayload {
+  playerId?: string
+  playerName?: string
+  objectiveKey?: string
+  objectiveName?: string
+  victoryPoints?: number
+  totalVictoryPoints?: number
+}
+
 function HostView() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -84,6 +93,24 @@ function HostView() {
         addLog(`${data.playerName} left the game`, 'leave')
       }
 
+      const handleObjectiveCompleted = (data: ObjectiveCompletedPayload) => {
+        const playerLabel = data.playerName || data.playerId || 'A player'
+        const objectiveLabel = data.objectiveName || data.objectiveKey || 'an objective'
+        const vpValue = typeof data.victoryPoints === 'number' && !Number.isNaN(data.victoryPoints)
+          ? data.victoryPoints
+          : null
+        const totalValue = typeof data.totalVictoryPoints === 'number' && !Number.isNaN(data.totalVictoryPoints)
+          ? data.totalVictoryPoints
+          : null
+
+        const messageParts = [`${playerLabel} completed ${objectiveLabel}`]
+        if (vpValue !== null) {
+          messageParts.push(`(+${vpValue} VP${totalValue !== null ? `, total ${totalValue}` : ''})`)
+        }
+
+        addLog(messageParts.join(' '), 'info')
+      }
+
       const handleError = (data: SocketErrorPayload) => {
         addLog(`Error: ${data.message}`, 'error')
       }
@@ -100,6 +127,7 @@ function HostView() {
       socket.on('hosting_started', handleHostingStarted)
       socket.on('player_joined', handlePlayerJoined)
       socket.on('player_left', handlePlayerLeft)
+      socket.on('objective_completed', handleObjectiveCompleted)
       socket.on('error', handleError)
       socket.on('disconnect', handleDisconnect)
       socket.on('connect_error', handleConnectError)
@@ -114,6 +142,7 @@ function HostView() {
         socket.off('hosting_started', handleHostingStarted)
         socket.off('player_joined', handlePlayerJoined)
         socket.off('player_left', handlePlayerLeft)
+        socket.off('objective_completed', handleObjectiveCompleted)
         socket.off('error', handleError)
         socket.off('disconnect', handleDisconnect)
         socket.off('connect_error', handleConnectError)

@@ -1,0 +1,67 @@
+{
+    "objectives": [
+        {
+            "key": "amass_wealth",
+            "name": "Amass Wealth",
+            "type": "public_tier1",
+            "victoryPoints": 1,
+            "asset": "objectives/tier1/amass_wealth.jpg"
+        },
+        {
+            "key": "build_defenses",
+            "name": "Build Defenses",
+            "type": "public_tier1",
+            "victoryPoints": 1,
+            "asset": "objectives/tier1/build_defenses.jpg"
+        },
+        {
+            "key": "corner_the_market",
+            "name": "Corner the Market",
+            "type": "public_tier1",
+            "victoryPoints": 1,
+            "asset": "objectives/tier1/corner_the_market.jpg"
+        },
+        {
+            "key": "achieve_supremacy",
+            "name": "Achieve Supremacy",
+            "type": "public_tier2",
+            "victoryPoints": 2,
+            "asset": "objectives/tier2/achieve_supremacy.jpg"
+        },
+        {
+            "key": "construct_massive_cities",
+            "name": "Construct Massive Cities",
+            "type": "public_tier2",
+            "victoryPoints": 2,
+            "asset": "objectives/tier2/construct_massive_cities.jpg"
+        },
+        {
+            "key": "found_a_golden_age",
+            "name": "Found a Golden Age",
+            "type": "public_tier2",
+            "victoryPoints": 2,
+            "asset": "objectives/tier2/found_a_golden_age.jpg"
+        },
+        {
+            "key": "darken_the_skies",
+            "name": "Darken the Skies",
+            "type": "secret",
+            "victoryPoints": 1,
+            "asset": "objectives/secret/darken_the_skies.jpg"
+        },
+        {
+            "key": "drive_the_debate",
+            "name": "Drive the Debate",
+            "type": "secret",
+            "victoryPoints": 1,
+            "asset": "objectives/secret/drive_the_debate.jpg"
+        },
+        {
+            "key": "forge_an_alliance",
+            "name": "Forge an Alliance",
+            "type": "secret",
+            "victoryPoints": 1,
+            "asset": "objectives/secret/forge_an_alliance.jpg"
+        }
+    ]
+}

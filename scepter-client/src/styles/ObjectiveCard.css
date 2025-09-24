@@ -1,0 +1,144 @@
+.objective-card-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  width: 170px;
+  position: relative;
+}
+
+.objective-card-wrapper.is-disabled {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.card-base.objective-card {
+  width: 100%;
+  perspective: none;
+}
+
+.card-base.objective-card .card-inner {
+  transition: opacity 0.35s ease, box-shadow 0.25s ease;
+  transform: none;
+}
+
+.card-base.objective-card.is-flipped .card-inner {
+  transform: none;
+}
+
+.card-base.objective-card .card-face--back {
+  transform: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.card-base.objective-card .card-face--front {
+  transition: opacity 0.35s ease;
+}
+
+.card-base.objective-card.is-flipped .card-face--front {
+  opacity: 0;
+}
+
+.card-base.objective-card.is-flipped .card-face--back {
+  opacity: 1;
+}
+
+.card-base.objective-card .card-face--back img {
+  filter: grayscale(100%) saturate(0.25) brightness(0.65);
+}
+
+.card-base.objective-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.06);
+}
+
+.objective-card-check {
+  position: absolute;
+  pointer-events: none;
+  bottom: 16px;
+  right: 16px;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, rgba(147, 197, 253, 0.95), rgba(76, 106, 255, 0.65));
+  box-shadow:
+    0 0 18px rgba(96, 165, 250, 0.45),
+    0 0 42px rgba(59, 130, 246, 0.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: scale(0.45) rotate(-14deg);
+  opacity: 0;
+  transition: opacity 0.28s ease, transform 0.32s ease;
+}
+
+.objective-card-wrapper.is-completed .objective-card-check {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+  animation: objective-card-pop 0.45s ease-out;
+}
+
+.objective-card-check-icon {
+  font-size: 1.9rem;
+  color: rgba(241, 245, 249, 0.95);
+  text-shadow:
+    0 2px 10px rgba(15, 23, 42, 0.45),
+    0 0 14px rgba(147, 197, 253, 0.75);
+}
+
+@keyframes objective-card-pop {
+  0% {
+    transform: scale(0.4) rotate(-22deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.08) rotate(4deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.objective-card-meta {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: rgba(226, 232, 240, 0.92);
+}
+
+.objective-card-name {
+  font-size: 0.86rem;
+  letter-spacing: 0.05em;
+}
+
+.objective-card-points {
+  font-size: 0.8rem;
+  color: rgba(147, 197, 253, 0.85);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 640px) {
+  .objective-card-wrapper {
+    width: 150px;
+  }
+
+  .objective-card-check {
+    width: 46px;
+    height: 46px;
+    bottom: 12px;
+    right: 12px;
+  }
+
+  .objective-card-check-icon {
+    font-size: 1.6rem;
+  }
+}

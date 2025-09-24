@@ -40,6 +40,17 @@ from components.strategem_catalog import (
   update_strategem_trade_goods as set_strategem_trade_goods,
   StrategemCatalogError
 )
+from components.objective_catalog import (
+  ensure_objective_tables,
+  populate_objective_definitions,
+  list_player_objectives as fetch_player_objectives,
+  list_available_objective_definitions,
+  add_player_objective as assign_player_objective,
+  update_player_objective_state as set_player_objective_state,
+  remove_player_objective as delete_player_objective,
+  get_objective_definition,
+  ObjectiveCatalogError
+)
 from routes.games import get_game_db_path, update_game_timestamp
 
 logger = logging.getLogger(__name__)
@@ -48,6 +59,7 @@ logger = logging.getLogger(__name__)
 ActionRow = Dict[str, Any]
 ExplorationRow = Dict[str, Any]
 StrategemRow = Dict[str, Any]
+ObjectiveRow = Dict[str, Any]
 
 
 def _ensure_game_database(game_name: str, games_dir: str) -> Tuple[bool, str]:
@@ -57,6 +69,25 @@ def _ensure_game_database(game_name: str, games_dir: str) -> Tuple[bool, str]:
     logger.warning("Requested game '%s' does not exist at %s", game_name, db_path)
     return False, db_path
   return True, db_path
+
+
+def _fetch_player_name(db_path: str, player_id: str) -> Optional[str]:
+  """Return the player's display name for logging."""
+  try:
+    row = execute_query(
+      db_path,
+      "SELECT name FROM players WHERE playerId = ?",
+      (player_id,),
+      fetch_one=True
+    )
+  except DatabaseError as exc:
+    logger.error("Failed to fetch player '%s' for logging: %s", player_id, exc)
+    return None
+
+  if not row:
+    return None
+
+  return row.get('name')
 
 
 def _normalise_action_rows(rows: Sequence[ActionRow]) -> List[ActionRow]:
@@ -90,6 +121,19 @@ def _normalise_strategem_rows(rows: Sequence[StrategemRow]) -> List[StrategemRow
       item['isExhausted'] = bool(item.get('isExhausted', 0))
     if 'tradeGoods' in item and item['tradeGoods'] is not None:
       item['tradeGoods'] = int(item['tradeGoods'])
+    normalised.append(item)
+  return normalised
+
+
+def _normalise_objective_rows(rows: Sequence[ObjectiveRow]) -> List[ObjectiveRow]:
+  """Convert sqlite integer flags to booleans for objectives."""
+  normalised: List[ObjectiveRow] = []
+  for row in rows:
+    item = dict(row)
+    if 'isCompleted' in item:
+      item['isCompleted'] = bool(item.get('isCompleted', 0))
+    if 'victoryPoints' in item and item['victoryPoints'] is not None:
+      item['victoryPoints'] = int(item['victoryPoints'])
     normalised.append(item)
   return normalised
 
@@ -601,6 +645,164 @@ def update_strategem_trade_goods(
 
   update_game_timestamp(db_path)
   return {"strategem": updated}, 200
+
+
+def list_player_objectives(
+  game_name: str,
+  player_id: str,
+  games_dir: str
+) -> Tuple[Dict[str, Any], int]:
+  """Return the objectives currently assigned to the player."""
+  valid, db_path = _ensure_game_database(game_name, games_dir)
+  if not valid:
+    return {"error": "Game not found"}, 404
+
+  ensure_objective_tables(db_path)
+
+  try:
+    rows = fetch_player_objectives(db_path, player_id)
+  except ObjectiveCatalogError as exc:
+    logger.error("Objective catalog error for '%s' in '%s': %s", player_id, game_name, exc)
+    return {"error": str(exc) or "Objective catalog unavailable"}, 400
+  except DatabaseError as exc:
+    logger.error("Failed to load objectives for player '%s' in '%s': %s", player_id, game_name, exc)
+    return {"error": "Unable to load objectives"}, 500
+
+  return {"objectives": _normalise_objective_rows(rows)}, 200
+
+
+def list_player_objective_definitions(
+  game_name: str,
+  player_id: str,
+  games_dir: str
+) -> Tuple[Dict[str, Any], int]:
+  """Return objective definitions that can still be added for the player."""
+  valid, db_path = _ensure_game_database(game_name, games_dir)
+  if not valid:
+    return {"error": "Game not found"}, 404
+
+  ensure_objective_tables(db_path)
+
+  try:
+    definitions = list_available_objective_definitions(db_path, player_id)
+  except ObjectiveCatalogError as exc:
+    logger.error("Objective catalog error listing definitions for '%s' in '%s': %s", player_id, game_name, exc)
+    return {"error": str(exc) or "Objective catalog unavailable"}, 400
+  except DatabaseError as exc:
+    logger.error("Failed to list objective definitions for '%s' in '%s': %s", player_id, game_name, exc)
+    return {"error": "Unable to load objective definitions"}, 500
+
+  return {"objectives": _normalise_objective_rows(definitions)}, 200
+
+
+def add_player_objective(
+  game_name: str,
+  player_id: str,
+  objective_key: str,
+  games_dir: str
+) -> Tuple[Dict[str, Any], int]:
+  """Assign an objective to the player's board."""
+  valid, db_path = _ensure_game_database(game_name, games_dir)
+  if not valid:
+    return {"error": "Game not found"}, 404
+
+  ensure_objective_tables(db_path)
+
+  try:
+    added = assign_player_objective(db_path, player_id, objective_key)
+  except ObjectiveCatalogError as exc:
+    logger.error("Objective catalog error adding '%s' in '%s': %s", objective_key, game_name, exc)
+    return {"error": str(exc) or "Unable to add objective"}, 400
+  except DatabaseError as exc:
+    logger.error("Failed to add objective '%s' for player '%s' in '%s': %s", objective_key, player_id, game_name, exc)
+    return {"error": "Unable to add objective"}, 500
+
+  if added is None:
+    return {"error": "Objective already assigned"}, 409
+
+  update_game_timestamp(db_path)
+  return {"objective": _normalise_objective_rows([added])[0]}, 201
+
+
+def update_player_objective(
+  game_name: str,
+  player_id: str,
+  objective_key: str,
+  is_completed: bool,
+  games_dir: str
+) -> Tuple[Dict[str, Any], int]:
+  """Update the completion state of an objective for the player."""
+  valid, db_path = _ensure_game_database(game_name, games_dir)
+  if not valid:
+    return {"error": "Game not found"}, 404
+
+  ensure_objective_tables(db_path)
+
+  try:
+    result = set_player_objective_state(db_path, player_id, objective_key, is_completed)
+  except ObjectiveCatalogError as exc:
+    logger.error("Objective catalog error updating '%s' in '%s': %s", objective_key, game_name, exc)
+    return {"error": str(exc) or "Unable to update objective"}, 400
+  except DatabaseError as exc:
+    logger.error("Failed to update objective '%s' for player '%s' in '%s': %s", objective_key, player_id, game_name, exc)
+    return {"error": "Unable to update objective"}, 500
+
+  if not result:
+    return {"error": "Objective not assigned to player"}, 404
+
+  objective_payload = result.get('objective') or get_objective_definition(db_path, objective_key) or {'key': objective_key}
+  objective_payload['isCompleted'] = bool(result.get('objective', {}).get('isCompleted', is_completed))
+  objective_payload['victoryPoints'] = int(objective_payload.get('victoryPoints', 0))
+  total_victory = int(result.get('victoryPoints', 0))
+
+  update_game_timestamp(db_path)
+
+  player_name = _fetch_player_name(db_path, player_id) or player_id
+  status = 'completed' if objective_payload['isCompleted'] else 'unscored'
+  logger.info(
+    "Player '%s' %s objective '%s' for %s VP (total: %s)",
+    player_name,
+    status,
+    objective_payload.get('name', objective_key),
+    objective_payload.get('victoryPoints', 0),
+    total_victory
+  )
+
+  return {
+    "objective": _normalise_objective_rows([objective_payload])[0],
+    "victoryPoints": total_victory,
+    "playerName": player_name,
+    "playerId": player_id
+  }, 200
+
+
+def remove_player_objective(
+  game_name: str,
+  player_id: str,
+  objective_key: str,
+  games_dir: str
+) -> Tuple[Dict[str, Any], int]:
+  """Remove an objective from the player's board."""
+  valid, db_path = _ensure_game_database(game_name, games_dir)
+  if not valid:
+    return {"error": "Game not found"}, 404
+
+  ensure_objective_tables(db_path)
+
+  try:
+    victory_points = delete_player_objective(db_path, player_id, objective_key)
+  except ObjectiveCatalogError as exc:
+    logger.error("Objective catalog error removing '%s' in '%s': %s", objective_key, game_name, exc)
+    return {"error": str(exc) or "Unable to remove objective"}, 400
+  except DatabaseError as exc:
+    logger.error("Failed to remove objective '%s' for player '%s' in '%s': %s", objective_key, player_id, game_name, exc)
+    return {"error": "Unable to remove objective"}, 500
+
+  if victory_points is None:
+    return {"error": "Objective not assigned to player"}, 404
+
+  update_game_timestamp(db_path)
+  return {"success": True, "victoryPoints": int(victory_points)}, 200
 
 
 def explore_planet(
