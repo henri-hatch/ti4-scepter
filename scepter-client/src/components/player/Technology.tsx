@@ -9,7 +9,7 @@ import AddTechnologyModal from './AddTechnologyModal'
 import type { PlayerTechnology, TechnologyDefinition, TechnologyType } from '../../types/technology'
 import { formatFactionLabel } from '../../utils/technology'
 
-const TYPE_ORDER: TechnologyType[] = ['Biotic', 'Propulsion', 'Cybernetic', 'Warfare']
+const TYPE_ORDER: TechnologyType[] = ['Biotic', 'Propulsion', 'Cybernetic', 'Warfare', 'Unit']
 
 type TechnologyMap = Record<TechnologyType, PlayerTechnology[]>
 
@@ -301,7 +301,8 @@ function Technology() {
       Biotic: [],
       Propulsion: [],
       Cybernetic: [],
-      Warfare: []
+      Warfare: [],
+      Unit: []
     }
 
     technology.forEach((tech) => {

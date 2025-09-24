@@ -130,21 +130,28 @@ function CardInventory() {
     setStrategems(sortByName(rows))
   }, [gameName, playerId])
 
-  const fetchInventory = useCallback(async () => {
-    if (!gameName || !playerId) {
-      return
-    }
-    setLoading(true)
-    setError(null)
-    try {
-      await Promise.all([fetchActionCards(), fetchExplorationCards(), fetchStrategemCards()])
-    } catch (err) {
-      console.error(err)
-      setError('Unable to load card inventory. Please try again.')
-    } finally {
-      setLoading(false)
-    }
-  }, [fetchActionCards, fetchExplorationCards, fetchStrategemCards, gameName, playerId])
+  const fetchInventory = useCallback(
+    async ({ showError = true }: { showError?: boolean } = {}): Promise<boolean> => {
+      if (!gameName || !playerId) {
+        return true
+      }
+      setLoading(true)
+      try {
+        await Promise.all([fetchActionCards(), fetchExplorationCards(), fetchStrategemCards()])
+        setError(null)
+        return true
+      } catch (err) {
+        console.error(err)
+        if (showError) {
+          setError('Unable to load card inventory. Please try again.')
+        }
+        return false
+      } finally {
+        setLoading(false)
+      }
+    },
+    [fetchActionCards, fetchExplorationCards, fetchStrategemCards, gameName, playerId]
+  )
 
   useEffect(() => {
     setActions([])
@@ -157,10 +164,34 @@ function CardInventory() {
     setPendingStrategemDelete(null)
     setStrategemBusyKey(null)
     setStrategemTradeBusyKey(null)
-    if (gameName && playerId) {
-      fetchInventory()
+    if (!gameName || !playerId) {
+      return
     }
-  }, [gameName, playerId, fetchInventory])
+
+    let cancelled = false
+    let retryTimeout: ReturnType<typeof setTimeout> | null = null
+
+    const load = async () => {
+      setError(null)
+      const success = await fetchInventory({ showError: false })
+      if (!success && !cancelled) {
+        retryTimeout = setTimeout(async () => {
+          if (!cancelled) {
+            await fetchInventory({ showError: true })
+          }
+        }, 400)
+      }
+    }
+
+    load()
+
+    return () => {
+      cancelled = true
+      if (retryTimeout) {
+        clearTimeout(retryTimeout)
+      }
+    }
+  }, [fetchInventory, gameName, playerId])
 
   useEffect(() => {
     if (!socket) {

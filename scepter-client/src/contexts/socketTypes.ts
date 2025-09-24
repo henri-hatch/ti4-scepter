@@ -9,6 +9,7 @@ export interface PlayerInfo {
 export interface PlayerSummary {
   playerId: string
   name: string
+  faction?: string
 }
 
 export interface HostingStartedPayload {

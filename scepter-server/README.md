@@ -65,6 +65,11 @@ The server will start on `http://localhost:5000` by default.
 
 ### Players
 - **GET** `/api/game/<game_name>/player/<player_id>` - Returns the player's profile including faction and track totals.
+- **PUT** `/api/game/<game_name>/player/<player_id>/faction` - Assign or clear a player's faction, syncing starting technology and home planets automatically.
+- **PATCH** `/api/game/<game_name>/player/<player_id>/economy` - Updates trade goods and commodity totals, clamping negative inputs to zero.
+
+### Factions
+- **GET** `/api/factions` - Returns the faction catalog with asset paths, starting technology, and home planet metadata for selection menus.
 
 ### Planets
 - **GET** `/api/planets/catalog` - Returns the base planet catalog seeded into new games.

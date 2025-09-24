@@ -1,10 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../styles/HostGameModal.css'
+import FactionSelectorModal from './FactionSelectorModal'
+import type { FactionDefinition } from '../types/faction'
 
 interface Player {
   name: string
   id: string
+  factionKey: string | null
+  factionName: string | null
 }
 
 interface Game {
@@ -23,12 +27,13 @@ function HostGameModal({ isOpen, onClose }: HostGameModalProps) {
   const [activeTab, setActiveTab] = useState<'create' | 'resume'>('create')
   const [gameName, setGameName] = useState('')
   const [players, setPlayers] = useState<Player[]>([
-    { name: '', id: '1' },
-    { name: '', id: '2' }
+    { name: '', id: '1', factionKey: null, factionName: null },
+    { name: '', id: '2', factionKey: null, factionName: null }
   ])
   const [existingGames, setExistingGames] = useState<Game[]>([])
   const [selectedGame, setSelectedGame] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
+  const [factionModalPlayerId, setFactionModalPlayerId] = useState<string | null>(null)
 
   useEffect(() => {
     if (isOpen && activeTab === 'resume') {
@@ -50,11 +55,14 @@ function HostGameModal({ isOpen, onClose }: HostGameModalProps) {
 
   const addPlayer = () => {
     const newId = (players.length + 1).toString()
-    setPlayers([...players, { name: '', id: newId }])
+    setPlayers([...players, { name: '', id: newId, factionKey: null, factionName: null }])
   }
 
   const removePlayer = (id: string) => {
     if (players.length > 2) {
+      if (factionModalPlayerId === id) {
+        setFactionModalPlayerId(null)
+      }
       setPlayers(players.filter(player => player.id !== id))
     }
   }
@@ -64,6 +72,40 @@ function HostGameModal({ isOpen, onClose }: HostGameModalProps) {
       player.id === id ? { ...player, name } : player
     ))
   }
+
+  const handleOpenFactionModal = (id: string) => {
+    setFactionModalPlayerId(id)
+  }
+
+  const handleConfirmFaction = async (selection: FactionDefinition | null) => {
+    if (!factionModalPlayerId) {
+      return
+    }
+
+    setPlayers((current) => current.map((player) => {
+      if (player.id !== factionModalPlayerId) {
+        return player
+      }
+      return {
+        ...player,
+        factionKey: selection ? selection.key : null,
+        factionName: selection ? selection.name : null
+      }
+    }))
+
+    setFactionModalPlayerId(null)
+  }
+
+  const handleCloseFactionModal = () => {
+    setFactionModalPlayerId(null)
+  }
+
+  const activeFactionPlayer = useMemo(() => {
+    if (!factionModalPlayerId) {
+      return null
+    }
+    return players.find((player) => player.id === factionModalPlayerId) ?? null
+  }, [players, factionModalPlayerId])
 
   const handleCreateGame = async () => {
     if (!gameName.trim()) {
@@ -87,7 +129,10 @@ function HostGameModal({ isOpen, onClose }: HostGameModalProps) {
         },
         body: JSON.stringify({
           gameName: gameName.trim(),
-          players: validPlayers.map(player => ({ name: player.name.trim() }))
+          players: validPlayers.map(player => ({
+            name: player.name.trim(),
+            factionKey: player.factionKey
+          }))
         })      })
 
       const data = await response.json()
@@ -128,8 +173,9 @@ function HostGameModal({ isOpen, onClose }: HostGameModalProps) {
   if (!isOpen) return null
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
+    <>
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-content" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Host Game</h2>
           <button className="close-button" onClick={onClose}>×</button>
@@ -176,6 +222,18 @@ function HostGameModal({ isOpen, onClose }: HostGameModalProps) {
                       placeholder={`Player ${index + 1} name...`}
                       className="text-input"
                     />
+                    <div className="player-faction-column">
+                      <span className={player.factionKey ? 'player-faction-badge selected' : 'player-faction-badge'}>
+                        {player.factionName ?? 'No faction selected'}
+                      </span>
+                      <button
+                        type="button"
+                        className="select-faction-button"
+                        onClick={() => handleOpenFactionModal(player.id)}
+                      >
+                        {player.factionKey ? 'Change Faction' : 'Select Faction'}
+                      </button>
+                    </div>
                     {players.length > 2 && (
                       <button
                         type="button"
@@ -248,8 +306,17 @@ function HostGameModal({ isOpen, onClose }: HostGameModalProps) {
             </div>
           </div>
         )}
+        </div>
       </div>
-    </div>
+      <FactionSelectorModal
+        isOpen={Boolean(factionModalPlayerId)}
+        onClose={handleCloseFactionModal}
+        onConfirm={handleConfirmFaction}
+        selectedKey={activeFactionPlayer?.factionKey}
+        title={`Select Faction${activeFactionPlayer?.name ? ` for ${activeFactionPlayer.name}` : ''}`}
+        allowUnset
+      />
+    </>
   )
 }
 

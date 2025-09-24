@@ -14,7 +14,7 @@ type AddTechnologyModalProps = {
   disabled?: boolean
 }
 
-const ORDERED_TYPES: Array<TechnologyDefinition['type']> = ['Biotic', 'Propulsion', 'Cybernetic', 'Warfare']
+const ORDERED_TYPES: Array<TechnologyDefinition['type']> = ['Biotic', 'Propulsion', 'Cybernetic', 'Warfare', 'Unit']
 
 function AddTechnologyModal({ isOpen, onClose, technology, onAddTechnology, disabled = false }: AddTechnologyModalProps) {
   const sortedTechnology = useMemo(() => {

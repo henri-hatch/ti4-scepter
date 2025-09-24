@@ -1,4 +1,4 @@
-export type TechnologyType = 'Biotic' | 'Propulsion' | 'Cybernetic' | 'Warfare'
+export type TechnologyType = 'Biotic' | 'Propulsion' | 'Cybernetic' | 'Warfare' | 'Unit'
 export type TechnologyFaction = 'none' | string
 
 export interface TechnologyDefinition {

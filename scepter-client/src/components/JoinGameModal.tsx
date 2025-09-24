@@ -16,6 +16,7 @@ interface ActiveGame {
 interface Player {
   playerId: string
   name: string
+  faction: string
 }
 
 interface JoinGameModalProps {
@@ -116,7 +117,14 @@ function JoinGameModal({ isOpen, onClose }: JoinGameModalProps) {
       const response = await fetch(`/api/game/${encodeURIComponent(gameName)}/players`)
       if (response.ok) {
         const data = await response.json()
-        setAvailablePlayers(data.players || [])
+        const players: Player[] = Array.isArray(data.players)
+          ? data.players.map((player: Player) => ({
+              playerId: player.playerId,
+              name: player.name,
+              faction: (player.faction ?? 'none').toLowerCase()
+            }))
+          : []
+        setAvailablePlayers(players)
         setStep('select-player')
       } else {
         setError('Failed to fetch game players')
@@ -170,6 +178,17 @@ function JoinGameModal({ isOpen, onClose }: JoinGameModalProps) {
       hour: '2-digit',
       minute: '2-digit'
     })
+  }
+
+  const formatFactionName = (factionKey: string) => {
+    if (!factionKey || factionKey === 'none') {
+      return 'Faction: Unassigned'
+    }
+    const label = factionKey
+      .split('_')
+      .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+      .join(' ')
+    return `Faction: ${label}`
   }
 
   if (!isOpen) return null
@@ -266,11 +285,16 @@ function JoinGameModal({ isOpen, onClose }: JoinGameModalProps) {
               ) : (
                 <div className="players-list">
                   {availablePlayers.map((player) => (
-                    <div 
-                      key={player.playerId}                      className={`player-item ${selectedPlayer === player.playerId ? 'selected' : ''}`}                      onClick={() => setSelectedPlayer(player.playerId)}
+                    <div
+                      key={player.playerId}
+                      className={`player-item ${selectedPlayer === player.playerId ? 'selected' : ''}`}
+                      onClick={() => setSelectedPlayer(player.playerId)}
                     >
                       <div className="player-name">{player.name}</div>
-                      <div className="player-id">{player.playerId.substring(0, 8)}...</div>
+                      <div className="player-meta">
+                        <span className="player-faction">{formatFactionName(player.faction)}</span>
+                        <span className="player-id">{player.playerId.substring(0, 8)}...</span>
+                      </div>
                     </div>
                   ))}
                 </div>

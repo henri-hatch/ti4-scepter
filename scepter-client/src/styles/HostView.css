@@ -171,6 +171,25 @@
   font-family: monospace;
 }
 
+.player-faction-label {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(100, 108, 255, 0.18);
+  border: 1px solid rgba(100, 108, 255, 0.45);
+  color: #e0e7ff;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.player-faction-label.none {
+  background: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.35);
+  color: #cbd5f5;
+}
+
 .logs-container {
   flex: 1;
   overflow-y: auto;

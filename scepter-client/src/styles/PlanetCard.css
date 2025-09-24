@@ -28,17 +28,25 @@
 .planet-card-stats {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   font-size: 0.8rem;
+  column-gap: 0.5rem;
+  min-width: 0;
 }
 
 .planet-card-type {
+  flex: 1;
+  min-width: 0;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #93c5fd;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .planet-card-resource {
+  flex-shrink: 0;
   font-weight: 600;
 }
 

@@ -80,6 +80,87 @@
       "tier": 1,
       "position": "infantry",
       "asset": "technology/mahact_gene_sorcerers/crimson_legionnaire_ii.face.jpg"
+    },
+    {
+      "key": "war_sun",
+      "name": "War Sun",
+      "type": "Unit",
+      "faction": "none",
+      "tier": 1,
+      "position": "war_sun",
+      "asset": "technology/unit/war_sun.face.jpg"
+    },
+    {
+      "key": "dreadnought_ii",
+      "name": "Dreadnought II",
+      "type": "Unit",
+      "faction": "none",
+      "tier": 1,
+      "position": "dreadnought",
+      "asset": "technology/unit/dreadnought_ii.face.jpg"
+    },
+    {
+      "key": "carrier_ii",
+      "name": "Carrier II",
+      "type": "Unit",
+      "faction": "none",
+      "tier": 1,
+      "position": "carrier",
+      "asset": "technology/unit/carrier_ii.face.jpg"
+    },
+    {
+      "key": "cruiser_ii",
+      "name": "Cruiser II",
+      "type": "Unit",
+      "faction": "none",
+      "tier": 1,
+      "position": "cruiser",
+      "asset": "technology/unit/cruiser_ii.face.jpg"
+    },
+    {
+      "key": "destroyer_ii",
+      "name": "Destroyer II",
+      "type": "Unit",
+      "faction": "none",
+      "tier": 1,
+      "position": "destroyer",
+      "asset": "technology/unit/destroyer_ii.face.jpg"
+    },
+    {
+      "key": "fighter_ii",
+      "name": "Fighter II",
+      "type": "Unit",
+      "faction": "none",
+      "tier": 1,
+      "position": "fighter",
+      "asset": "technology/unit/fighter_ii.face.jpg"
+    },
+    {
+      "key": "pds_ii",
+      "name": "PDS II",
+      "type": "Unit",
+      "faction": "none",
+      "tier": 1,
+      "position": "pds",
+      "asset": "technology/unit/pds_ii.face.jpg"
+    },
+    {
+      "key": "infantry_ii",
+      "name": "Infantry II",
+      "type": "Unit",
+      "faction": "none",
+      "tier": 1,
+      "position": "infantry",
+      "asset": "technology/unit/infantry_ii.face.jpg"
+    },
+    {
+      "key": "space_dock_ii",
+      "name": "Space Dock II",
+      "type": "Unit",
+      "faction": "none",
+      "tier": 1,
+      "position": "space_dock",
+      "asset": "technology/unit/space_dock_ii.face.jpg"
     }
   ]
 }

@@ -124,7 +124,7 @@ def populate_exploration_definitions(db_path: str) -> None:
 
       if rows_to_insert:
         cursor.executemany(
-          '''INSERT INTO explorationDefinitions (
+          '''INSERT OR IGNORE INTO explorationDefinitions (
               explorationKey,
               name,
               type,

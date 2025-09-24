@@ -168,6 +168,13 @@ function HostView() {
     return `log-entry log-${type}`
   }
 
+  const formatFaction = (value?: string) => {
+    if (!value || value === 'none') {
+      return 'No faction selected'
+    }
+    return value.replace(/_/g, ' ')
+  }
+
   if (isConnecting) {
     return (
       <div className="host-view">
@@ -215,6 +222,9 @@ function HostView() {
                   <div key={player.playerId} className="player-item">
                     <div className="player-name">{player.name}</div>
                     <div className="player-id">{player.playerId}</div>
+                    <div className={player.faction && player.faction !== 'none' ? 'player-faction-label' : 'player-faction-label none'}>
+                      {formatFaction(player.faction)}
+                    </div>
                   </div>
                 ))
               )}

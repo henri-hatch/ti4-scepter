@@ -4,7 +4,7 @@ import sys
 from flask import Flask, send_from_directory, request, jsonify
 from flask_socketio import SocketIO, emit, join_room, leave_room, disconnect
 
-from routes.games import create_game_file, list_games, get_player_profile
+from routes.games import create_game_file, list_games, get_player_profile, update_player_faction, update_player_economy
 from routes.planets import (
     list_catalog_planets,
     list_player_planets,
@@ -52,8 +52,10 @@ from routes.cards import (
     list_planet_attachments,
     restore_relic_from_fragments
 )
+from routes.factions import list_faction_catalog
 from components.planet_catalog import PlanetCatalogError
 from components.technology_catalog import TechnologyCatalogError
+from components.faction_catalog import get_faction_definition, FactionCatalogError
 from components.action_catalog import ActionCatalogError
 from components.exploration_catalog import ExplorationCatalogError
 from components.session_manager import session_manager
@@ -128,15 +130,28 @@ def validate_create_game_request(data):
         
         if 'name' not in player:
             return False, f"Player {i+1} missing required field: name"
-        
+
         player_name = player['name'].strip() if player['name'] else ""
         if not player_name:
             return False, f"Player {i+1} name cannot be empty"
-        
+
         if player_name in player_names:
             return False, f"Duplicate player name: {player_name}"
-        
+
         player_names.add(player_name)
+
+        faction_raw = player.get('factionKey') or player.get('faction')
+        if faction_raw is not None and str(faction_raw).strip():
+            faction_key = str(faction_raw).strip().lower()
+            if faction_key != 'none':
+                try:
+                    faction_definition = get_faction_definition(faction_key)
+                except FactionCatalogError as exc:
+                    logger.error("Failed to load faction catalog while validating create game request: %s", exc)
+                    return False, "Unable to validate faction selection"
+
+                if not faction_definition:
+                    return False, f"Unknown faction '{faction_raw}' for player {player_name}"
     
     return True, None
 
@@ -158,10 +173,19 @@ def create_game():
         # Normalize player data
         normalized_players = []
         for player in players:
+            faction_value = player.get('factionKey')
+            if faction_value is None:
+                faction_value = player.get('faction')
+            if isinstance(faction_value, str):
+                faction_value = faction_value.strip() or None
+            elif faction_value is not None:
+                faction_value = str(faction_value).strip() or None
+
             normalized_players.append({
-                'name': player['name'].strip()
+                'name': player['name'].strip(),
+                'factionKey': faction_value
             })
-        
+
         logger.info(f"Creating game '{game_name}' with {len(normalized_players)} players")
         
         # Create the game
@@ -195,6 +219,13 @@ def list_all_games():
     except Exception as e:
         logger.error(f"Unexpected error in list_all_games: {e}", exc_info=True)
         return jsonify({"error": "Failed to list games"}), 500
+
+
+@app.route('/api/factions', methods=['GET'])
+def get_faction_catalog():
+    """Expose the faction catalog for client selection menus."""
+    response, status = list_faction_catalog()
+    return jsonify(response), status
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -231,6 +262,29 @@ def get_game_players(game_name):
 def get_player_info(game_name, player_id):
     """API endpoint to get a single player's profile for a specific game."""
     response, status = get_player_profile(game_name, player_id, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/faction', methods=['PUT'])
+def set_player_faction(game_name, player_id):
+    """Update a player's faction assignment."""
+    data = request.get_json(silent=True) or {}
+    faction_key = data.get('factionKey')
+    response, status = update_player_faction(game_name, player_id, faction_key, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/economy', methods=['PATCH'])
+def patch_player_economy(game_name, player_id):
+    """Update a player's trade goods or commodity totals."""
+    data = request.get_json(silent=True) or {}
+    response, status = update_player_economy(
+        game_name,
+        player_id,
+        data.get('tradeGoods'),
+        data.get('commodities'),
+        GAMES_DIR
+    )
     return jsonify(response), status
 
 

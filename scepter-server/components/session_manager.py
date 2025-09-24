@@ -187,7 +187,13 @@ class SessionManager:
             # Get players from database
             players = execute_query(
                 session.db_path,
-                "SELECT playerId, name FROM players ORDER BY name",
+                """
+                    SELECT playerId,
+                           name,
+                           COALESCE(faction, 'none') AS faction
+                    FROM players
+                    ORDER BY name
+                """,
                 fetch_all=True
             )
             

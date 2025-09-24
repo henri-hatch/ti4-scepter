@@ -143,6 +143,49 @@
   flex: 1;
 }
 
+.player-faction-column {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+  min-width: 180px;
+}
+
+.player-faction-badge {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  border: 1px dashed rgba(148, 163, 184, 0.4);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #a8b0c1;
+  background: rgba(255, 255, 255, 0.04);
+  text-transform: capitalize;
+}
+
+.player-faction-badge.selected {
+  border-style: solid;
+  border-color: rgba(100, 108, 255, 0.5);
+  color: #f3f4ff;
+  background: rgba(100, 108, 255, 0.18);
+}
+
+.select-faction-button {
+  padding: 0.5rem 1rem;
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  color: #c7d2fe;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.2s ease, border 0.2s ease;
+  white-space: nowrap;
+}
+
+.select-faction-button:hover {
+  background: rgba(99, 102, 241, 0.3);
+  border-color: rgba(99, 102, 241, 0.6);
+}
+
 .remove-player-button {
   padding: 0.5rem 1rem;
   background: rgba(220, 38, 38, 0.2);
@@ -300,6 +343,11 @@
   .player-input-row {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .player-faction-column {
+    width: 100%;
+    min-width: 0;
   }
   
   .modal-actions {
