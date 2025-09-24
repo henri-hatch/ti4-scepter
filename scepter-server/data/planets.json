@@ -71,6 +71,18 @@
       "legendaryAbility": null,
       "assetFront": "planets/the_dark.face.jpg",
       "assetBack": "planets/the_dark.back.jpg"
+    },
+    {
+      "key": "ixth",
+      "name": "Ixth",
+      "type": "mahact_gene_sorcerers",
+      "techSpecialty": null,
+      "resources": 3,
+      "influence": 5,
+      "legendary": false,
+      "legendaryAbility": null,
+      "assetFront": "planets/ixth.face.jpg",
+      "assetBack": "planets/ixth.back.jpg"
     }
   ]
 }

@@ -47,6 +47,22 @@
       "faction": "empyrean",
       "tier": 0,
       "asset": "technology/empyrean/voidwatch.face.jpg"
+    },
+    {
+      "key": "bio-stims",
+      "name": "Bio-Stims",
+      "type": "Biotic",
+      "faction": "none",
+      "tier": 1,
+      "asset": "technology/biostims.face.jpg"
+    },
+    {
+      "key": "predictive_intelligence",
+      "name": "Predictive Intelligence",
+      "type": "Biotic",
+      "faction": "none",
+      "tier": 1,
+      "asset": "technology/predictive_intelligence.face.jpg"
     }
   ]
 }

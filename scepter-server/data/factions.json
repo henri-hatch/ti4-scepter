@@ -1,0 +1,24 @@
+{
+    "factions": [
+        {
+            "key": "empyrean",
+            "name": "The Empyrean",
+            "startingTech": ["dark_energy_tap"],
+            "homePlanet": ["the_dark"],
+            "faction_reference_asset": "factions/empyrean/reference/empyrean.jpg",
+            "faction_sheet_asset_front": "factions/empyrean/sheet/empyrean.jpg",
+            "faction_sheet_asset_back": "factions/empyrean/sheet/empyrean-back.jpg",
+            "faction_token_asset": "factions/empyrean/token/empyrean.jpg"
+        },
+        {
+            "key": "mahact_gene_sorcerers",
+            "name": "The Mahact Gene-Sorcerers",
+            "startingTech": ["bio-stims", "predictive_intelligence"],
+            "homePlanet": ["ixth"],
+            "faction_reference_asset": "factions/mahact_gene_sorcerers/reference/mahact_gene_sorcerers.jpg",
+            "faction_sheet_asset_front": "factions/mahact_gene_sorcerers/sheet/mahact_gene_sorcerers.jpg",
+            "faction_sheet_asset_back": "factions/mahact_gene_sorcerers/sheet/mahact_gene_sorcerers-back.jpg",
+            "faction_token_asset": "factions/mahact_gene_sorcerers/token/mahact_gene_sorcerers.jpg"
+        }
+    ]
+}
