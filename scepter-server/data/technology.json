@@ -6,6 +6,7 @@
       "type": "Biotic",
       "faction": "none",
       "tier": 0,
+      "position": null,
       "asset": "technology/neural_motivator.face.jpg"
     },
     {
@@ -14,6 +15,7 @@
       "type": "Propulsion",
       "faction": "none",
       "tier": 0,
+      "position": null,
       "asset": "technology/dark_energy_tap.face.jpg"
     },
     {
@@ -22,6 +24,7 @@
       "type": "Cybernetic",
       "faction": "none",
       "tier": 0,
+      "position": null,
       "asset": "technology/sarween_tools.face.jpg"
     },
     {
@@ -30,6 +33,7 @@
       "type": "Warfare",
       "faction": "none",
       "tier": 0,
+      "position": null,
       "asset": "technology/ai_development_algorithm.face.jpg"
     },
     {
@@ -38,6 +42,7 @@
       "type": "Propulsion",
       "faction": "empyrean",
       "tier": 0,
+      "position": null,
       "asset": "technology/empyrean/aetherstream.face.jpg"
     },
     {
@@ -46,6 +51,7 @@
       "type": "Biotic",
       "faction": "empyrean",
       "tier": 0,
+      "position": null,
       "asset": "technology/empyrean/voidwatch.face.jpg"
     },
     {
@@ -54,6 +60,7 @@
       "type": "Biotic",
       "faction": "none",
       "tier": 1,
+      "position": null,
       "asset": "technology/biostims.face.jpg"
     },
     {
@@ -62,7 +69,17 @@
       "type": "Biotic",
       "faction": "none",
       "tier": 1,
+      "position": null,
       "asset": "technology/predictive_intelligence.face.jpg"
+    },
+    {
+      "key": "crimson_legionnaire_ii",
+      "name": "Crimson Legionnaire II",
+      "type": "Unit",
+      "faction": "mahact_gene_sorcerers",
+      "tier": 1,
+      "position": "infantry",
+      "asset": "technology/mahact_gene_sorcerers/crimson_legionnaire_ii.face.jpg"
     }
   ]
 }
