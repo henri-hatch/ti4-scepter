@@ -29,6 +29,7 @@ function ObjectiveCard({ card, onToggle, onRemove, disabled = false }: Objective
 
   return (
     <div className={`objective-card-wrapper ${disabled ? 'is-disabled' : ''} ${card.isCompleted ? 'is-completed' : ''}`}>
+      <div className="objective-card-glow" aria-hidden="true" />
       <Card
         frontImage={asset}
         backImage={asset}

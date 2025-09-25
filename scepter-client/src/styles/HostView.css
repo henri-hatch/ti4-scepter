@@ -102,13 +102,18 @@
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
 }
 
+
 .host-dashboard {
   display: grid;
-  grid-template-columns: 1fr 2fr;
+  grid-template-columns: 2fr 1fr;
+  grid-template-areas:
+    'objectives objectives'
+    'players activity';
   gap: 2rem;
   min-height: 600px;
 }
 
+.objective-board-panel,
 .players-panel,
 .activity-panel {
   background: rgba(0, 0, 0, 0.7);
@@ -119,6 +124,20 @@
   flex-direction: column;
 }
 
+.objective-board-panel {
+  grid-area: objectives;
+  gap: 1.25rem;
+}
+
+.players-panel {
+  grid-area: players;
+}
+
+.activity-panel {
+  grid-area: activity;
+}
+
+.objective-board-panel h3,
 .players-panel h3,
 .activity-panel h3 {
   margin: 0 0 1rem 0;
@@ -142,6 +161,104 @@
   background: rgba(255, 255, 255, 0.03);
   border-radius: 8px;
   border: 1px dashed #444;
+}
+
+.objective-board {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.objective-board-heading {
+  text-align: center;
+  font-size: 0.95rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(191, 219, 254, 0.8);
+}
+
+.objective-board-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  justify-content: center;
+}
+
+.objective-board-slot {
+  position: relative;
+  width: 500px;
+  max-width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.6);
+  box-shadow: 0 28px 48px rgba(2, 6, 23, 0.5);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.objective-board-slot.is-filled:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 36px 60px rgba(59, 130, 246, 0.38);
+}
+
+.objective-board-card {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.objective-board-card.is-placeholder {
+  opacity: 0.4;
+  filter: saturate(0.6) brightness(0.88);
+}
+
+.objective-board-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0.85rem 1rem;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 0.75) 55%, rgba(15, 23, 42, 0.95) 100%);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  color: rgba(241, 245, 249, 0.95);
+  letter-spacing: 0.06em;
+}
+
+.objective-board-name {
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.objective-board-vp {
+  font-size: 0.9rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(191, 219, 254, 0.9);
+}
+
+.objective-board-tokens {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.objective-board-tokens img {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid rgba(191, 219, 254, 0.45);
+  box-shadow: 0 16px 24px rgba(15, 23, 42, 0.55);
+  background: rgba(15, 23, 42, 0.65);
 }
 
 .player-item {
@@ -250,10 +367,20 @@
   flex: 1;
 }
 
+@media (max-width: 1400px) {
+  .objective-board-slot {
+    width: min(460px, 100%);
+  }
+}
+
 /* Mobile responsiveness */
 @media (max-width: 1024px) {
   .host-dashboard {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      'objectives'
+      'players'
+      'activity';
     gap: 1.5rem;
   }
   
@@ -284,10 +411,20 @@
   .connection-info p {
     font-size: 1rem;
   }
-  
+
   .players-panel,
-  .activity-panel {
+  .activity-panel,
+  .objective-board-panel {
     padding: 1rem;
+  }
+
+  .objective-board-slot {
+    width: min(360px, 100%);
+  }
+
+  .objective-board-tokens img {
+    width: 52px;
+    height: 52px;
   }
   
   .log-entry {
@@ -309,5 +446,18 @@
   .stop-hosting-btn {
     padding: 0.75rem 1.5rem;
     font-size: 1rem;
+  }
+
+  .objective-board-slot {
+    width: min(300px, 100%);
+  }
+
+  .objective-board-name {
+    font-size: 0.9rem;
+  }
+
+  .objective-board-tokens img {
+    width: 48px;
+    height: 48px;
   }
 }

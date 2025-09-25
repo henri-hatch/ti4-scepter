@@ -108,8 +108,10 @@ The server will start on `http://localhost:5000` by default.
 - **GET** `/api/game/<game_name>/player/<player_id>/objectives` - Lists objectives assigned to the player.
 - **GET** `/api/game/<game_name>/player/<player_id>/objectives/definitions` - Definitions still available to claim.
 - **POST** `/api/game/<game_name>/player/<player_id>/objectives` - Adds an objective to the player's board.
+- **POST** `/api/game/<game_name>/player/<player_id>/objectives/draw` - Randomly assigns an unclaimed objective of the provided `type` (public_tier1, public_tier2, secret).
 - **PATCH** `/api/game/<game_name>/player/<player_id>/objectives/<objective_key>` - Marks the objective as completed or uncompleted and updates victory points.
 - **DELETE** `/api/game/<game_name>/player/<player_id>/objectives/<objective_key>` - Removes the objective and refunds any victory points it granted.
+- **GET** `/api/game/<game_name>/objectives/public` - Returns public objectives in play, their slots, and who has scored them.
 
 ### Exploration & Attachments
 - **GET** `/api/exploration/catalog` - Returns the exploration catalog.
@@ -230,6 +232,13 @@ Each game database contains:
 - `objectiveKey` - Objective assigned to the player
 - `isCompleted` - Boolean stored as 0/1
 - `completedAt` - Timestamp when the objective was completed (null if unscored)
+
+### `gamePublicObjectives` table
+- `objectiveKey` - Public objective currently in play (unique)
+- `type` - `public_tier1` or `public_tier2`
+- `slotIndex` - Zero-based slot on the shared objective display
+- `addedBy` - Player who added or drew the card (nullable)
+- `addedAt` - Timestamp when the card entered play
 
 ### `explorationDefinitions` table
 - `explorationKey` - Catalog key for lookup

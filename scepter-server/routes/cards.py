@@ -48,7 +48,9 @@ from components.objective_catalog import (
   add_player_objective as assign_player_objective,
   update_player_objective_state as set_player_objective_state,
   remove_player_objective as delete_player_objective,
+  draw_random_objective_for_player,
   get_objective_definition,
+  list_public_objective_progress,
   ObjectiveCatalogError
 )
 from routes.games import get_game_db_path, update_game_timestamp
@@ -134,6 +136,8 @@ def _normalise_objective_rows(rows: Sequence[ObjectiveRow]) -> List[ObjectiveRow
       item['isCompleted'] = bool(item.get('isCompleted', 0))
     if 'victoryPoints' in item and item['victoryPoints'] is not None:
       item['victoryPoints'] = int(item['victoryPoints'])
+    if 'slotIndex' in item and item['slotIndex'] is not None:
+      item['slotIndex'] = int(item['slotIndex'])
     normalised.append(item)
   return normalised
 
@@ -724,6 +728,54 @@ def add_player_objective(
   return {"objective": _normalise_objective_rows([added])[0]}, 201
 
 
+def draw_player_objective(
+  game_name: str,
+  player_id: str,
+  objective_type: str,
+  games_dir: str
+) -> Tuple[Dict[str, Any], int]:
+  """Randomly assign an objective of the requested type to the player."""
+  if not objective_type:
+    return {"error": "Objective type is required"}, 400
+
+  valid, db_path = _ensure_game_database(game_name, games_dir)
+  if not valid:
+    return {"error": "Game not found"}, 404
+
+  ensure_objective_tables(db_path)
+
+  try:
+    drawn = draw_random_objective_for_player(db_path, player_id, objective_type)
+  except ObjectiveCatalogError as exc:
+    logger.error(
+      "Objective catalog error drawing type '%s' for player '%s' in '%s': %s",
+      objective_type,
+      player_id,
+      game_name,
+      exc
+    )
+    message = str(exc) or "Unable to draw objective"
+    lowered = message.lower()
+    if 'already assigned' in lowered:
+      return {"error": message}, 409
+    return {"error": message}, 400
+  except DatabaseError as exc:
+    logger.error(
+      "Failed to draw objective type '%s' for player '%s' in '%s': %s",
+      objective_type,
+      player_id,
+      game_name,
+      exc
+    )
+    return {"error": "Unable to draw objective"}, 500
+
+  if drawn is None:
+    return {"error": "No objectives of this type remain"}, 409
+
+  update_game_timestamp(db_path)
+  return {"objective": _normalise_objective_rows([drawn])[0]}, 201
+
+
 def update_player_objective(
   game_name: str,
   player_id: str,
@@ -753,11 +805,14 @@ def update_player_objective(
   objective_payload = result.get('objective') or get_objective_definition(db_path, objective_key) or {'key': objective_key}
   objective_payload['isCompleted'] = bool(result.get('objective', {}).get('isCompleted', is_completed))
   objective_payload['victoryPoints'] = int(objective_payload.get('victoryPoints', 0))
+  if 'slotIndex' in objective_payload and objective_payload['slotIndex'] is not None:
+    objective_payload['slotIndex'] = int(objective_payload['slotIndex'])
   total_victory = int(result.get('victoryPoints', 0))
 
   update_game_timestamp(db_path)
 
   player_name = _fetch_player_name(db_path, player_id) or player_id
+  player_faction = str(result.get('playerFaction', 'none') or 'none').lower()
   status = 'completed' if objective_payload['isCompleted'] else 'unscored'
   logger.info(
     "Player '%s' %s objective '%s' for %s VP (total: %s)",
@@ -772,7 +827,8 @@ def update_player_objective(
     "objective": _normalise_objective_rows([objective_payload])[0],
     "victoryPoints": total_victory,
     "playerName": player_name,
-    "playerId": player_id
+    "playerId": player_id,
+    "playerFaction": player_faction
   }, 200
 
 
@@ -790,7 +846,7 @@ def remove_player_objective(
   ensure_objective_tables(db_path)
 
   try:
-    victory_points = delete_player_objective(db_path, player_id, objective_key)
+    removal = delete_player_objective(db_path, player_id, objective_key)
   except ObjectiveCatalogError as exc:
     logger.error("Objective catalog error removing '%s' in '%s': %s", objective_key, game_name, exc)
     return {"error": str(exc) or "Unable to remove objective"}, 400
@@ -798,11 +854,80 @@ def remove_player_objective(
     logger.error("Failed to remove objective '%s' for player '%s' in '%s': %s", objective_key, player_id, game_name, exc)
     return {"error": "Unable to remove objective"}, 500
 
-  if victory_points is None:
+  if removal is None:
     return {"error": "Objective not assigned to player"}, 404
 
   update_game_timestamp(db_path)
-  return {"success": True, "victoryPoints": int(victory_points)}, 200
+  victory_points = int(removal.get('victoryPoints', 0))
+  response: Dict[str, Any] = {
+    "success": True,
+    "victoryPoints": victory_points,
+    "playerId": removal.get('playerId', player_id)
+  }
+
+  if removal.get('removedFromGame'):
+    public_payload = {
+      'objectiveKey': removal.get('objectiveKey'),
+      'type': removal.get('type'),
+      'slotIndex': removal.get('slotIndex'),
+      'adjustedPlayers': removal.get('adjustedPlayers', [])
+    }
+    response['removedFromGame'] = True
+    response['public'] = public_payload
+
+  return response, 200
+
+
+def list_public_objectives_summary(
+  game_name: str,
+  games_dir: str
+) -> Tuple[Dict[str, Any], int]:
+  """Return the public objectives in play along with scoring players."""
+  valid, db_path = _ensure_game_database(game_name, games_dir)
+  if not valid:
+    return {"error": "Game not found"}, 404
+
+  ensure_objective_tables(db_path)
+
+  try:
+    objectives = list_public_objective_progress(db_path)
+  except (ObjectiveCatalogError, DatabaseError) as exc:
+    logger.error("Failed to list public objectives for '%s': %s", game_name, exc)
+    return {"error": "Unable to load public objectives"}, 500
+
+  serialised: List[Dict[str, Any]] = []
+  for entry in objectives:
+    item = {
+      'key': entry.get('key'),
+      'name': entry.get('name'),
+      'type': entry.get('type'),
+      'victoryPoints': int(entry.get('victoryPoints', 0) or 0),
+      'asset': entry.get('asset'),
+      'slotIndex': entry.get('slotIndex'),
+      'addedAt': entry.get('addedAt'),
+      'addedBy': entry.get('addedBy'),
+      'scoredBy': []  # filled below
+    }
+
+    if item['slotIndex'] is not None:
+      try:
+        item['slotIndex'] = int(item['slotIndex'])
+      except (TypeError, ValueError):
+        item['slotIndex'] = None
+
+    scored_players = []
+    for scored in entry.get('scoredBy', []):
+      scored_players.append({
+        'playerId': scored.get('playerId'),
+        'playerName': scored.get('playerName'),
+        'faction': scored.get('faction') or 'none',
+        'completedAt': scored.get('completedAt')
+      })
+
+    item['scoredBy'] = scored_players
+    serialised.append(item)
+
+  return {"objectives": serialised}, 200
 
 
 def explore_planet(

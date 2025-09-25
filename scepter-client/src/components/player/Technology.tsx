@@ -5,7 +5,7 @@ import '../../styles/Planets.css'
 import { useSocket } from '../../contexts/useSocket'
 import PlayerActionMenu from './PlayerActionMenu'
 import TechnologyCard from '../cards/TechnologyCard'
-import AddTechnologyModal from './AddTechnologyModal'
+import ManageTechnologyModal from './ManageTechnologyModal'
 import type { PlayerTechnology, TechnologyDefinition, TechnologyType } from '../../types/technology'
 import { formatFactionLabel } from '../../utils/technology'
 
@@ -42,7 +42,7 @@ function Technology() {
   const [catalog, setCatalog] = useState<TechnologyDefinition[]>([])
   const [catalogLoaded, setCatalogLoaded] = useState(false)
   const [catalogLoading, setCatalogLoading] = useState(false)
-  const [showAddModal, setShowAddModal] = useState(false)
+  const [manageOpen, setManageOpen] = useState(false)
   const [mutatingTechnologyKey, setMutatingTechnologyKey] = useState<string | null>(null)
   const [pendingDeletion, setPendingDeletion] = useState<PlayerTechnology | null>(null)
   const [playerFaction, setPlayerFaction] = useState('none')
@@ -53,6 +53,7 @@ function Technology() {
     setCatalogLoaded(false)
     setCatalogLoading(false)
     setProfileLoaded(false)
+    setManageOpen(false)
   }, [gameName, playerId])
 
   const fetchPlayerTechnology = useCallback(async () => {
@@ -144,11 +145,11 @@ function Technology() {
     }
   }, [gameName, playerId])
 
-  const handleOpenAddModal = async () => {
+  const handleOpenManageModal = async () => {
     if (!catalogLoaded && !catalogLoading) {
       await refetchCatalog()
     }
-    setShowAddModal(true)
+    setManageOpen(true)
   }
 
   const availableTechnology = useMemo(() => {
@@ -230,15 +231,15 @@ function Technology() {
     }
   }
 
-  const handleConfirmDelete = async () => {
-    if (!pendingDeletion || !gameName || !playerId || mutatingTechnologyKey) {
-      return
+  const removeTechnology = useCallback(async (tech: PlayerTechnology): Promise<boolean> => {
+    if (!gameName || !playerId || mutatingTechnologyKey) {
+      return false
     }
 
-    setMutatingTechnologyKey(pendingDeletion.key)
+    setMutatingTechnologyKey(tech.key)
     setError(null)
     try {
-      const response = await fetch(`/api/game/${encodeURIComponent(gameName)}/player/${encodeURIComponent(playerId)}/technology/${encodeURIComponent(pendingDeletion.key)}`, {
+      const response = await fetch(`/api/game/${encodeURIComponent(gameName)}/player/${encodeURIComponent(playerId)}/technology/${encodeURIComponent(tech.key)}`, {
         method: 'DELETE'
       })
 
@@ -246,32 +247,43 @@ function Technology() {
         throw new Error('Failed to delete technology')
       }
 
-      setTechnology((previous) => previous.filter((item) => item.key !== pendingDeletion.key))
+      setTechnology((previous) => previous.filter((item) => item.key !== tech.key))
       if (catalogLoaded) {
         setCatalog((previous) => {
-          const exists = previous.some((item) => item.key === pendingDeletion.key)
-          if (!exists) {
-            const definition: TechnologyDefinition = {
-              key: pendingDeletion.key,
-              name: pendingDeletion.name,
-              type: pendingDeletion.type,
-              faction: pendingDeletion.faction,
-              tier: pendingDeletion.tier,
-              asset: pendingDeletion.asset
-            }
-            const updated = [...previous, definition]
-            sortTechnology(updated)
-            return updated
+          const exists = previous.some((item) => item.key === tech.key)
+          if (exists) {
+            return previous
           }
-          return previous
+          const definition: TechnologyDefinition = {
+            key: tech.key,
+            name: tech.name,
+            type: tech.type,
+            faction: tech.faction,
+            tier: tech.tier,
+            asset: tech.asset
+          }
+          const updated = [...previous, definition]
+          sortTechnology(updated)
+          return updated
         })
       }
-      setPendingDeletion(null)
+      return true
     } catch (err) {
       console.error(err)
       setError('Unable to delete technology. Please try again.')
+      return false
     } finally {
       setMutatingTechnologyKey(null)
+    }
+  }, [catalogLoaded, gameName, mutatingTechnologyKey, playerId])
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDeletion) {
+      return
+    }
+    const success = await removeTechnology(pendingDeletion)
+    if (success) {
+      setPendingDeletion(null)
     }
   }
 
@@ -368,20 +380,28 @@ function Technology() {
       <PlayerActionMenu
         options={[
           {
-            label: catalogLoading ? 'Loading…' : 'Add Technology',
-            onSelect: handleOpenAddModal,
+            label: catalogLoading ? 'Loading…' : 'Manage Technology',
+            onSelect: () => {
+              void handleOpenManageModal()
+            },
             disabled: catalogLoading || !gameName || !playerId
           }
         ]}
         ariaLabel="Technology actions"
       />
 
-      <AddTechnologyModal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        technology={availableTechnology}
-        onAddTechnology={handleAddTechnology}
-        disabled={mutatingTechnologyKey !== null}
+      <ManageTechnologyModal
+        isOpen={manageOpen}
+        onClose={() => setManageOpen(false)}
+        owned={technology}
+        available={availableTechnology}
+        onAdd={(tech) => {
+          void handleAddTechnology(tech)
+        }}
+        onRemove={(tech) => {
+          void removeTechnology(tech)
+        }}
+        busyKey={mutatingTechnologyKey}
       />
 
       {pendingDeletion ? (

@@ -6,6 +6,7 @@ export interface ObjectiveDefinition {
   type: ObjectiveType
   victoryPoints: number
   asset: string
+  slotIndex?: number | null
 }
 
 export interface PlayerObjective extends ObjectiveDefinition {

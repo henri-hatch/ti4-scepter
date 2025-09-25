@@ -5,8 +5,11 @@ import '../../styles/ObjectivesPage.css'
 import PlayerActionMenu from './PlayerActionMenu'
 import ObjectiveCard from '../cards/ObjectiveCard'
 import ManageObjectivesModal from './ManageObjectivesModal'
+import ObjectiveDrawModal from './ObjectiveDrawModal'
+import CardDrawModal from './CardDrawModal'
 import { useSocket } from '../../contexts/useSocket'
 import type { ObjectiveDefinition, ObjectiveType, PlayerObjective } from '../../types/objectives'
+import { resolveAssetPath } from '../../utils/assets'
 
 const CATEGORY_ORDER: ObjectiveType[] = ['public_tier1', 'public_tier2', 'secret']
 const CATEGORY_LABELS: Record<ObjectiveType, string> = {
@@ -15,12 +18,18 @@ const CATEGORY_LABELS: Record<ObjectiveType, string> = {
   secret: 'Secret Objectives'
 }
 
+const DRAW_TITLES: Record<ObjectiveType, string> = {
+  public_tier1: 'Stage I Objective Drawn',
+  public_tier2: 'Stage II Objective Drawn',
+  secret: 'Secret Objective Drawn'
+}
+
 function sortByName<T extends { name: string }>(items: T[]): T[] {
   return [...items].sort((a, b) => a.name.localeCompare(b.name))
 }
 
 function Objectives() {
-  const { playerInfo } = useSocket()
+  const { playerInfo, socket } = useSocket()
   const gameName = playerInfo.gameName ?? ''
   const playerId = playerInfo.playerId ?? ''
 
@@ -35,6 +44,11 @@ function Objectives() {
   const [definitionsLoading, setDefinitionsLoading] = useState(false)
   const [manageOpen, setManageOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<PlayerObjective | null>(null)
+  const [drawOpen, setDrawOpen] = useState(false)
+  const [drawBusyType, setDrawBusyType] = useState<ObjectiveType | null>(null)
+  const [drawError, setDrawError] = useState<string | null>(null)
+  const [revealOpen, setRevealOpen] = useState(false)
+  const [revealedObjective, setRevealedObjective] = useState<PlayerObjective | null>(null)
 
   const [victoryPoints, setVictoryPoints] = useState(0)
   const [victoryLoading, setVictoryLoading] = useState(false)
@@ -45,6 +59,11 @@ function Objectives() {
     setDefinitionsLoaded(false)
     setManageOpen(false)
     setPendingDelete(null)
+    setDrawOpen(false)
+    setDrawBusyType(null)
+    setDrawError(null)
+    setRevealOpen(false)
+    setRevealedObjective(null)
     setBusyKey(null)
     setVictoryPoints(0)
   }, [])
@@ -90,12 +109,17 @@ function Objectives() {
         throw new Error(payload.error || 'Failed to load objectives')
       }
       const rows: PlayerObjective[] = Array.isArray(payload.objectives)
-        ? payload.objectives.map((card: PlayerObjective) => ({
-            ...card,
-            isCompleted: Boolean(card.isCompleted)
-          }))
+        ? payload.objectives.map((card: PlayerObjective) => {
+            const slotValue = card.slotIndex
+            const slotIndex = typeof slotValue === 'number' && Number.isFinite(slotValue) ? slotValue : null
+            return {
+              ...card,
+              slotIndex,
+              isCompleted: Boolean(card.isCompleted)
+            }
+          })
         : []
-      setObjectives(() => sortByName(rows))
+      setObjectives(rows)
     } catch (err) {
       console.error(err)
       setError('Unable to load objectives. Please try again.')
@@ -108,6 +132,11 @@ function Objectives() {
     void fetchObjectives()
     void fetchVictoryPoints()
   }, [fetchObjectives, fetchVictoryPoints])
+
+  const closeReveal = useCallback(() => {
+    setRevealOpen(false)
+    setRevealedObjective(null)
+  }, [])
 
   const loadObjectiveDefinitions = useCallback(async () => {
     if (!gameName || !playerId) {
@@ -136,6 +165,77 @@ function Objectives() {
     }
   }, [gameName, playerId])
 
+  const refreshObjectives = useCallback(() => {
+    void fetchObjectives()
+    if (definitionsLoaded && !definitionsLoading) {
+      void loadObjectiveDefinitions()
+    }
+  }, [definitionsLoaded, definitionsLoading, fetchObjectives, loadObjectiveDefinitions])
+
+  useEffect(() => {
+    if (!socket || !gameName) {
+      return
+    }
+
+    const handlePublicAdded = (payload: { gameName?: string }) => {
+      if (payload?.gameName !== gameName) {
+        return
+      }
+      refreshObjectives()
+    }
+
+    const handlePublicRemoved = (payload: { gameName?: string; adjustedPlayers?: Array<{ playerId?: string }> }) => {
+      if (payload?.gameName !== gameName) {
+        return
+      }
+      refreshObjectives()
+      if (Array.isArray(payload.adjustedPlayers)) {
+        const affected = payload.adjustedPlayers.some((entry) => entry.playerId === playerId)
+        if (affected) {
+          void fetchVictoryPoints()
+        }
+      }
+    }
+
+    const handleObjectiveState = (payload: {
+      gameName?: string
+      playerId?: string
+      objectiveKey?: string
+      isCompleted?: boolean
+      totalVictoryPoints?: number
+    }) => {
+      if (payload?.gameName !== gameName || payload.playerId !== playerId) {
+        return
+      }
+      const objectiveKey = payload.objectiveKey
+      if (objectiveKey) {
+        setObjectives((previous) => previous.map((item) => {
+          if (item.key !== objectiveKey) {
+            return item
+          }
+          return {
+            ...item,
+            isCompleted: Boolean(payload.isCompleted)
+          }
+        }))
+      }
+      const nextPoints = Number(payload?.totalVictoryPoints)
+      if (!Number.isNaN(nextPoints)) {
+        setVictoryPoints(nextPoints)
+      }
+    }
+
+    socket.on('public_objective_added', handlePublicAdded)
+    socket.on('public_objective_removed', handlePublicRemoved)
+    socket.on('objective_scoring_state', handleObjectiveState)
+
+    return () => {
+      socket.off('public_objective_added', handlePublicAdded)
+      socket.off('public_objective_removed', handlePublicRemoved)
+      socket.off('objective_scoring_state', handleObjectiveState)
+    }
+  }, [socket, gameName, playerId, refreshObjectives, fetchVictoryPoints])
+
   const objectivesByType = useMemo(() => {
     const groups: Record<ObjectiveType, PlayerObjective[]> = {
       public_tier1: [],
@@ -148,7 +248,19 @@ function Objectives() {
     })
 
     CATEGORY_ORDER.forEach((type) => {
-      groups[type] = sortByName(groups[type])
+      const entries = groups[type]
+      if (type === 'public_tier1' || type === 'public_tier2') {
+        groups[type] = [...entries].sort((a, b) => {
+          const slotA = typeof a.slotIndex === 'number' ? a.slotIndex : Number.MAX_SAFE_INTEGER
+          const slotB = typeof b.slotIndex === 'number' ? b.slotIndex : Number.MAX_SAFE_INTEGER
+          if (slotA !== slotB) {
+            return slotA - slotB
+          }
+          return a.name.localeCompare(b.name)
+        })
+      } else {
+        groups[type] = sortByName(entries)
+      }
     })
 
     return groups
@@ -216,9 +328,12 @@ function Objectives() {
       }
 
       const saved = (payload.objective ?? {}) as Partial<PlayerObjective>
+      const slotValue = saved.slotIndex
+      const slotIndex = typeof slotValue === 'number' && Number.isFinite(slotValue) ? slotValue : null
       const normalised: PlayerObjective = {
         ...definition,
         ...saved,
+        slotIndex,
         isCompleted: Boolean(saved.isCompleted)
       }
 
@@ -295,8 +410,93 @@ function Objectives() {
     setManageOpen(true)
   }, [definitions.length, definitionsLoaded, definitionsLoading, gameName, playerId, loadObjectiveDefinitions])
 
+  const handleOpenDraw = useCallback(() => {
+    if (!gameName || !playerId) {
+      return
+    }
+    setError(null)
+    setStatusMessage(null)
+    setDrawError(null)
+    setRevealOpen(false)
+    setRevealedObjective(null)
+    setDrawOpen(true)
+  }, [gameName, playerId])
+
+  const handleCloseDraw = useCallback(() => {
+    if (drawBusyType) {
+      return
+    }
+    setDrawOpen(false)
+    setDrawError(null)
+  }, [drawBusyType])
+
+  const handleDrawObjectiveType = useCallback(async (type: ObjectiveType) => {
+    if (!gameName || !playerId || drawBusyType) {
+      return
+    }
+    setDrawBusyType(type)
+    setDrawError(null)
+    setError(null)
+    setStatusMessage(null)
+    try {
+      const response = await fetch(`/api/game/${encodeURIComponent(gameName)}/player/${encodeURIComponent(playerId)}/objectives/draw`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type })
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload.error || 'Unable to draw objective')
+      }
+      const raw = (payload.objective ?? {}) as Partial<PlayerObjective>
+      if (!raw.key) {
+        throw new Error('Objective payload was incomplete')
+      }
+
+      const parsedPoints = Number(raw.victoryPoints ?? 0)
+      const safePoints = Number.isNaN(parsedPoints) ? 0 : parsedPoints
+
+      const slotValue = raw.slotIndex
+      const slotIndex = typeof slotValue === 'number' && Number.isFinite(slotValue) ? slotValue : null
+      const normalised: PlayerObjective = {
+        key: raw.key,
+        name: raw.name ?? 'Objective',
+        type: (raw.type ?? type) as ObjectiveType,
+        victoryPoints: safePoints,
+        asset: raw.asset ?? '',
+        slotIndex,
+        isCompleted: Boolean(raw.isCompleted),
+        acquiredAt: raw.acquiredAt ?? null,
+        completedAt: raw.completedAt ?? null
+      }
+
+      setObjectives((previous) => {
+        const filtered = previous.filter((item) => item.key !== normalised.key)
+        return [...filtered, normalised]
+      })
+      setDefinitions((previous) => previous.filter((item) => item.key !== normalised.key))
+      setStatusMessage(`${normalised.name} drawn.`)
+      setDrawOpen(false)
+      setRevealedObjective(normalised)
+      setRevealOpen(true)
+    } catch (err) {
+      console.error(err)
+      const message = err instanceof Error ? err.message : 'Unable to draw objective. Please try again.'
+      setDrawError(message)
+    } finally {
+      setDrawBusyType(null)
+    }
+  }, [drawBusyType, gameName, playerId])
+
   const actionOptions = useMemo(() => (
     [
+      {
+        label: 'Draw Objective',
+        onSelect: () => {
+          handleOpenDraw()
+        },
+        disabled: !gameName || !playerId || Boolean(drawBusyType) || revealOpen
+      },
       {
         label: definitionsLoading ? 'Loading…' : 'Manage Objectives',
         onSelect: () => {
@@ -305,7 +505,7 @@ function Objectives() {
         disabled: !gameName || !playerId || definitionsLoading
       }
     ]
-  ), [definitionsLoading, gameName, handleOpenManage, playerId])
+  ), [definitionsLoading, drawBusyType, gameName, handleOpenDraw, handleOpenManage, playerId, revealOpen])
 
   const renderSectionContent = (type: ObjectiveType) => {
     if (loading) {
@@ -363,6 +563,35 @@ function Objectives() {
           </section>
         ))}
       </div>
+
+      <ObjectiveDrawModal
+        isOpen={drawOpen}
+        busyType={drawBusyType}
+        error={drawError}
+        onClose={handleCloseDraw}
+        onDraw={(type) => {
+          void handleDrawObjectiveType(type)
+        }}
+      />
+
+      <CardDrawModal<PlayerObjective>
+        isOpen={revealOpen && Boolean(revealedObjective)}
+        title={revealedObjective ? DRAW_TITLES[revealedObjective.type] : 'Objective Drawn'}
+        initialCard={revealedObjective}
+        onConfirm={() => {
+          closeReveal()
+        }}
+        onDismiss={() => {
+          closeReveal()
+        }}
+        confirmLabel="Close"
+        dismissLabel="Close"
+        renderCard={(card) => (
+          <div className="objective-reveal-card">
+            <img src={resolveAssetPath(card.asset)} alt={`${card.name} objective`} draggable={false} />
+          </div>
+        )}
+      />
 
       <ManageObjectivesModal
         isOpen={manageOpen}

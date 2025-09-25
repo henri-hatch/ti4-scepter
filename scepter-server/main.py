@@ -44,8 +44,10 @@ from routes.cards import (
     list_player_objectives,
     list_player_objective_definitions,
     add_player_objective,
+    draw_player_objective,
     update_player_objective,
     remove_player_objective,
+    list_public_objectives_summary,
     explore_planet,
     add_attachment_to_planet,
     remove_attachment_from_planet,
@@ -608,6 +610,13 @@ def get_player_objectives(game_name, player_id):
     return jsonify(response), status
 
 
+@app.route('/api/game/<game_name>/objectives/public', methods=['GET'])
+def get_public_objectives(game_name):
+    """Return public objectives in play for the game."""
+    response, status = list_public_objectives_summary(game_name, GAMES_DIR)
+    return jsonify(response), status
+
+
 @app.route('/api/game/<game_name>/player/<player_id>/objectives/definitions', methods=['GET'])
 def get_player_objective_definitions(game_name, player_id):
     """Return objective definitions available for the player."""
@@ -620,6 +629,56 @@ def create_player_objective(game_name, player_id):
     """Assign an objective to the player's board."""
     data = request.get_json(silent=True) or {}
     response, status = add_player_objective(game_name, player_id, data.get('objectiveKey'), GAMES_DIR)
+    if status == 201 and isinstance(response, dict):
+        objective = response.get('objective') if isinstance(response.get('objective'), dict) else None
+        objective_type = (objective.get('type') or '').lower() if objective else ''
+        if objective and objective_type in {'public_tier1', 'public_tier2'}:
+            objective_payload = dict(objective)
+            slot_index = objective_payload.get('slotIndex')
+            if slot_index is not None:
+                try:
+                    objective_payload['slotIndex'] = int(slot_index)
+                except (TypeError, ValueError):
+                    objective_payload['slotIndex'] = None
+            socketio.emit(
+                'public_objective_added',
+                {
+                    'gameName': game_name,
+                    'playerId': player_id,
+                    'objective': objective_payload,
+                    'source': 'manage'
+                },
+                room=game_name
+            )
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/player/<player_id>/objectives/draw', methods=['POST'])
+def draw_player_objective_endpoint(game_name, player_id):
+    """Randomly assign an objective of the requested type to the player."""
+    data = request.get_json(silent=True) or {}
+    response, status = draw_player_objective(game_name, player_id, data.get('type'), GAMES_DIR)
+    if status == 201 and isinstance(response, dict):
+        objective = response.get('objective') if isinstance(response.get('objective'), dict) else None
+        objective_type = (objective.get('type') or '').lower() if objective else ''
+        if objective and objective_type in {'public_tier1', 'public_tier2'}:
+            objective_payload = dict(objective)
+            slot_index = objective_payload.get('slotIndex')
+            if slot_index is not None:
+                try:
+                    objective_payload['slotIndex'] = int(slot_index)
+                except (TypeError, ValueError):
+                    objective_payload['slotIndex'] = None
+            socketio.emit(
+                'public_objective_added',
+                {
+                    'gameName': game_name,
+                    'playerId': player_id,
+                    'objective': objective_payload,
+                    'source': 'draw'
+                },
+                room=game_name
+            )
     return jsonify(response), status
 
 
@@ -641,18 +700,34 @@ def patch_player_objective(game_name, player_id, objective_key):
 
     if status == 200 and isinstance(response, dict):
         objective_payload = response.get('objective') if isinstance(response.get('objective'), dict) else {}
-        if objective_payload.get('isCompleted'):
+        is_completed = bool(objective_payload.get('isCompleted'))
+        objective_type = (objective_payload.get('type') or '').lower()
+        scoring_payload = {
+            'gameName': game_name,
+            'playerId': player_id,
+            'playerName': response.get('playerName', player_id),
+            'playerFaction': str(response.get('playerFaction', 'none') or 'none').lower(),
+            'objectiveKey': objective_key,
+            'objectiveType': objective_type,
+            'objectiveName': objective_payload.get('name', objective_key),
+            'slotIndex': objective_payload.get('slotIndex'),
+            'isCompleted': is_completed,
+            'victoryPoints': objective_payload.get('victoryPoints', 0),
+            'totalVictoryPoints': response.get('victoryPoints', 0)
+        }
+
+        if scoring_payload['slotIndex'] is not None:
+            try:
+                scoring_payload['slotIndex'] = int(scoring_payload['slotIndex'])
+            except (TypeError, ValueError):
+                scoring_payload['slotIndex'] = None
+
+        socketio.emit('objective_scoring_state', scoring_payload, room=game_name)
+
+        if is_completed:
             socketio.emit(
                 'objective_completed',
-                {
-                    'gameName': game_name,
-                    'playerId': player_id,
-                    'playerName': response.get('playerName', player_id),
-                    'objectiveKey': objective_key,
-                    'objectiveName': objective_payload.get('name', objective_key),
-                    'victoryPoints': objective_payload.get('victoryPoints', 0),
-                    'totalVictoryPoints': response.get('victoryPoints', 0)
-                },
+                scoring_payload,
                 room=game_name
             )
 
@@ -663,6 +738,26 @@ def patch_player_objective(game_name, player_id, objective_key):
 def delete_player_objective_endpoint(game_name, player_id, objective_key):
     """Remove an objective from the player's board."""
     response, status = remove_player_objective(game_name, player_id, objective_key, GAMES_DIR)
+    if status == 200 and isinstance(response, dict) and response.get('removedFromGame'):
+        public_payload = response.get('public') if isinstance(response.get('public'), dict) else {}
+        slot_index = public_payload.get('slotIndex')
+        if slot_index is not None:
+            try:
+                slot_index = int(slot_index)
+            except (TypeError, ValueError):
+                slot_index = None
+        socketio.emit(
+            'public_objective_removed',
+            {
+                'gameName': game_name,
+                'playerId': player_id,
+                'objectiveKey': public_payload.get('objectiveKey', objective_key),
+                'objectiveType': public_payload.get('type'),
+                'slotIndex': slot_index,
+                'adjustedPlayers': public_payload.get('adjustedPlayers', [])
+            },
+            room=game_name
+        )
     return jsonify(response), status
 
 
