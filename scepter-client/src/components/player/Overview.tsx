@@ -18,7 +18,8 @@ import {
   UNIT_SLOT_ORDER,
   UNIT_SLOT_POSITIONS,
   FACTION_UNIT_OVERRIDES,
-  type UnitSlotKey
+  type UnitSlotKey,
+  type UnitSlotPosition
 } from '../../data/unitSlots'
 
 type PlayerProfile = {
@@ -569,7 +570,8 @@ function Overview() {
         slot,
         label: UNIT_SLOT_POSITIONS[slot].label,
         definition: unitDefinitions[techKey] ?? fallbackDefinition,
-        owned: Boolean(ownedTechnology)
+        owned: Boolean(ownedTechnology),
+        position: UNIT_SLOT_POSITIONS[slot]
       }
     })
   ), [playerFaction, unitDefinitions, unitTechnologyMap])
@@ -597,7 +599,7 @@ function Overview() {
       key: string
       name: string
       asset: string
-      position: typeof UNIT_SLOT_POSITIONS[UnitSlotKey]
+      position: UnitSlotPosition
     }>
   }, [boardFace, playerFaction, unitTechnologyMap])
 
@@ -708,20 +710,32 @@ function Overview() {
                   <div className="card-face card-face--front">
                     <img src={frontAsset} alt="Faction board front" />
                     <div className="faction-board-overlays">
-                      {boardOverlays.map((overlay) => (
-                        <div
-                          key={overlay.key}
-                          className="unit-overlay visible"
-                          style={{
-                            top: `${overlay.position.top}%`,
-                            left: `${overlay.position.left}%`,
-                            width: `${overlay.position.width}%`,
-                            height: `${overlay.position.height}%`
-                          }}
-                        >
-                          <img src={overlay.asset} alt={`${overlay.name} unit upgrade`} />
-                        </div>
-                      ))}
+                      {boardOverlays.map((overlay) => {
+                        const { position } = overlay
+                        const hasExplicitRadius = Number.isFinite(position.borderRadius)
+                        const borderRadiusPx = hasExplicitRadius ? `${position.borderRadius}px` : undefined
+
+                        return (
+                          <div
+                            key={overlay.key}
+                            className="unit-overlay visible"
+                            style={{
+                              top: `${position.top}%`,
+                              left: `${position.left}%`,
+                              width: `${position.width}%`,
+                              height: `${position.height}%`,
+                              borderRadius: borderRadiusPx,
+                              overflow: 'hidden'
+                            }}
+                          >
+                            <img
+                              src={overlay.asset}
+                              alt={`${overlay.name} unit upgrade`}
+                              style={borderRadiusPx ? { borderRadius: borderRadiusPx } : undefined}
+                            />
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                   <div className="card-face card-face--back">

@@ -16,6 +16,8 @@ export interface UnitSlotPosition {
   left: number
   width: number
   height: number
+  size: number
+  borderRadius: number
 }
 
 export const UNIT_SLOT_ORDER: UnitSlotKey[] = [
@@ -31,15 +33,96 @@ export const UNIT_SLOT_ORDER: UnitSlotKey[] = [
 ]
 
 export const UNIT_SLOT_POSITIONS: Record<UnitSlotKey, UnitSlotPosition> = {
-  war_sun: { key: 'war_sun', label: 'War Sun', top: 30, left: 1, width: 24, height: 16 },
-  cruiser: { key: 'cruiser', label: 'Cruiser', top: 30, left: 26, width: 24, height: 16 },
-  dreadnought: { key: 'dreadnought', label: 'Dreadnought', top: 55, left: 1, width: 24, height: 16 },
-  carrier: { key: 'carrier', label: 'Carrier', top: 80, left: 1, width: 24, height: 16 },
-  destroyer: { key: 'destroyer', label: 'Destroyer', top: 55, left: 26, width: 24, height: 16 },
-  fighter: { key: 'fighter', label: 'Fighter', top: 80, left: 26, width: 24, height: 16 },
-  pds: { key: 'pds', label: 'PDS', top: 55, left: 50.5, width: 24, height: 16 },
-  infantry: { key: 'infantry', label: 'Infantry', top: 80, left: 51, width: 24, height: 16 },
-  space_dock: { key: 'space_dock', label: 'Space Dock', top: 80, left: 75, width: 24, height: 16 }
+  war_sun: {
+    key: 'war_sun',
+    label: 'War Sun',
+    top: 26,
+    left: 1.5,
+    width: 23,
+    height: 23,
+    size: 135,
+    borderRadius: 5
+  },
+  cruiser: {
+    key: 'cruiser',
+    label: 'Cruiser',
+    top: 26,
+    left: 26,
+    width: 23,
+    height: 23,
+    size: 135,
+    borderRadius: 5
+  },
+  dreadnought: {
+    key: 'dreadnought',
+    label: 'Dreadnought',
+    top: 51,
+    left: 1.5,
+    width: 23,
+    height: 23,
+    size: 135,
+    borderRadius: 5
+  },
+  carrier: {
+    key: 'carrier',
+    label: 'Carrier',
+    top: 76,
+    left: 1.5,
+    width: 23,
+    height: 23,
+    size: 135,
+    borderRadius: 5
+  },
+  destroyer: {
+    key: 'destroyer',
+    label: 'Destroyer',
+    top: 51,
+    left: 26,
+    width: 23,
+    height: 23,
+    size: 135,
+    borderRadius: 5
+  },
+  fighter: {
+    key: 'fighter',
+    label: 'Fighter',
+    top: 76,
+    left: 26,
+    width: 23,
+    height: 23,
+    size: 135,
+    borderRadius: 5
+  },
+  pds: {
+    key: 'pds',
+    label: 'PDS',
+    top: 51,
+    left: 51,
+    width: 23,
+    height: 23,
+    size: 135,
+    borderRadius: 5
+  },
+  infantry: {
+    key: 'infantry',
+    label: 'Infantry',
+    top: 76,
+    left: 51,
+    width: 23,
+    height: 23,
+    size: 135,
+    borderRadius: 5
+  },
+  space_dock: {
+    key: 'space_dock',
+    label: 'Space Dock',
+    top: 76,
+    left: 75.7,
+    width: 23,
+    height: 23,
+    size: 135,
+    borderRadius: 5
+  }
 }
 
 export const UNIT_SLOT_DEFAULT_TECH: Record<UnitSlotKey, string> = {

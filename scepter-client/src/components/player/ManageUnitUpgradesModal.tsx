@@ -1,6 +1,6 @@
 import { resolveAssetPath } from '../../utils/assets'
 import type { TechnologyDefinition } from '../../types/technology'
-import type { UnitSlotKey } from '../../data/unitSlots'
+import type { UnitSlotKey, UnitSlotPosition } from '../../data/unitSlots'
 import '../../styles/Overview.css'
 
 type UnitSlotEntry = {
@@ -8,6 +8,7 @@ type UnitSlotEntry = {
   label: string
   definition: TechnologyDefinition | null
   owned: boolean
+  position: UnitSlotPosition
 }
 
 type ManageUnitUpgradesModalProps = {
@@ -48,8 +49,10 @@ function ManageUnitUpgradesModal({
           </p>
           <div className="unit-upgrade-grid">
             {entries.map((entry) => {
-              const { definition, owned, label } = entry
+              const { definition, owned, label, position } = entry
               const isBusy = busyKey === definition?.key
+              const hasBorderRadius = Number.isFinite(position?.borderRadius)
+              const borderRadiusPx = hasBorderRadius ? `${position.borderRadius}px` : undefined
 
               if (!definition) {
                 return (
@@ -73,8 +76,17 @@ function ManageUnitUpgradesModal({
                       {owned ? 'Owned' : 'Available'}
                     </span>
                   </div>
-                  <div className="unit-upgrade-preview">
-                    <img src={preview} alt={`${definition.name} card`} />
+                  <div
+                    className="unit-upgrade-preview"
+                    style={{
+                      borderRadius: borderRadiusPx
+                    }}
+                  >
+                    <img
+                      src={preview}
+                      alt={`${definition.name} card`}
+                      style={borderRadiusPx ? { borderRadius: borderRadiusPx } : undefined}
+                    />
                   </div>
                   <button
                     type="button"

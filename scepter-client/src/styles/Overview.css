@@ -233,6 +233,8 @@
   transform: translateY(16px) scale(0.98);
   transition: transform 0.25s ease, opacity 0.25s ease;
   aspect-ratio: 750 / 500;
+  max-width: 750px;
+  max-height: 500px;
 }
 
 .unit-overlay.visible {
@@ -244,6 +246,7 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
+  border-radius: inherit;
 }
 
 .faction-board-back-placeholder {
@@ -514,12 +517,13 @@
 
 .unit-upgrade-preview {
   position: relative;
-  width: 100%;
+  width: min(100%, 750px);
   aspect-ratio: 750 / 500;
   border-radius: 10px;
   overflow: hidden;
   background: rgba(15, 23, 42, 0.6);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  margin: 0 auto;
 }
 
 .unit-upgrade-preview img {
@@ -529,6 +533,7 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
+  border-radius: inherit;
 }
 
 .unit-upgrade-placeholder {
