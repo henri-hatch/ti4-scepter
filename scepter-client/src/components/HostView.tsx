@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useSocket } from '../contexts/useSocket'
 import type { HostingStartedPayload, PlayerEventPayload, SocketErrorPayload } from '../contexts/socketTypes'
@@ -99,6 +99,7 @@ function HostView() {
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [isConnecting, setIsConnecting] = useState(true)
   const [publicObjectives, setPublicObjectives] = useState<ObjectiveBoard>(() => createEmptyBoard())
+  const hasRequestedHostingRef = useRef(false)
 
   // Get game name from location state (passed from HostGameModal)
   const gameNameFromState = location.state?.gameName
@@ -362,6 +363,7 @@ function HostView() {
         setIsConnecting(true)
         setPublicObjectives(createEmptyBoard())
         addLog('Disconnected from server', 'error')
+        hasRequestedHostingRef.current = false
       }
 
       const handleConnectError = (error: Error) => {
@@ -380,9 +382,10 @@ function HostView() {
       socket.on('connect_error', handleConnectError)
 
       // If connected, start hosting the game
-      if (isConnected) {
+      if (isConnected && !hasRequestedHostingRef.current) {
         addLog(`Connected to server (Session: ${socket.id})`, 'info')
         hostGame(gameNameFromState)
+        hasRequestedHostingRef.current = true
       }
 
       return () => {
@@ -399,6 +402,16 @@ function HostView() {
       }
     }
   }, [socket, connectionType, gameNameFromState, addLog, hostGame, isConnected, gameName, loadPublicObjectives])
+
+  useEffect(() => {
+    hasRequestedHostingRef.current = false
+  }, [gameNameFromState])
+
+  useEffect(() => {
+    if (!isConnected) {
+      hasRequestedHostingRef.current = false
+    }
+  }, [isConnected])
 
   useEffect(() => {
     if (gameName) {

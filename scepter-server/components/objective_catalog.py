@@ -464,7 +464,8 @@ def remove_public_objective_from_game(db_path: str, objective_key: str) -> Optio
       delta = int(definition.get('victoryPoints', 0) or 0)
       for row in player_rows:
         player_id = row['playerId']
-        if bool(row.get('isCompleted', 0)) and delta:
+        is_completed = bool(row['isCompleted'])
+        if is_completed and delta:
           cursor.execute(
             """
               UPDATE players

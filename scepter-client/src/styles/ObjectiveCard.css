@@ -2,8 +2,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
-  width: 220px;
+  gap: 0.6rem;
+  width: 180px;
   max-width: 100%;
   position: relative;
 }
@@ -110,8 +110,8 @@
 .objective-card-check {
   position: absolute;
   inset: 50%;
-  width: 120px;
-  height: 120px;
+  width: 110px;
+  height: 110px;
   border-radius: 50%;
   background: radial-gradient(circle at 50% 50%, rgba(191, 219, 254, 0.95) 0%, rgba(59, 130, 246, 0.35) 65%, rgba(15, 23, 42, 0) 100%);
   display: flex;
@@ -131,7 +131,7 @@
 }
 
 .objective-card-check-icon {
-  font-size: 3.2rem;
+  font-size: 3rem;
   color: rgba(226, 239, 255, 0.96);
   text-shadow:
     0 6px 18px rgba(15, 23, 42, 0.55),
@@ -179,14 +179,14 @@
 }
 
 .objective-card-name {
-  font-size: 1.15rem;
+  font-size: 1rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-weight: 600;
 }
 
 .objective-card-points {
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   color: rgba(147, 197, 253, 0.85);
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -198,38 +198,35 @@
 
 @media (max-width: 900px) {
   .objective-card-wrapper {
-    width: 200px;
+    width: 160px;
   }
 
   .objective-card-check {
-    width: 100px;
-    height: 100px;
+    width: 92px;
+    height: 92px;
   }
 
   .objective-card-check-icon {
-    font-size: 2.8rem;
+    font-size: 2.6rem;
   }
 }
 
 @media (max-width: 640px) {
   .objective-card-wrapper {
-    width: 170px;
-  }
-
-  .objective-card-wrapper {
+    width: 140px;
     max-width: 360px;
   }
 
   .objective-card-check {
-    width: 90px;
-    height: 90px;
+    width: 80px;
+    height: 80px;
   }
 
   .objective-card-check-icon {
-    font-size: 2.4rem;
+    font-size: 2.2rem;
   }
 
   .objective-card-name {
-    font-size: 1rem;
+    font-size: 0.9rem;
   }
 }
