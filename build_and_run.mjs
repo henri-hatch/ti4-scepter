@@ -1,21 +1,10 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
+const mode = (process.argv[2] || 'prod').toLowerCase()
 
-const execAsync = promisify(exec);
-
-async function run() {
-  try {
-    console.log('🔧 Building frontend...');
-    await execAsync('npm run build', { cwd: './scepter-client' });
-
-    console.log('🚀 Starting backend...');
-    const server = exec('python main.py', { cwd: './scepter-server' });
-
-    server.stdout.pipe(process.stdout);
-    server.stderr.pipe(process.stderr);
-  } catch (err) {
-    console.error('❌ Error:', err);
-  }
+if (mode === 'dev') {
+  await import('./build_and_run.dev.mjs')
+} else if (mode === 'prod' || mode === 'production') {
+  await import('./build_and_run.prod.mjs')
+} else {
+  console.error(`Unknown mode "${mode}". Use "dev" or "prod".`)
+  process.exit(1)
 }
-
-run();

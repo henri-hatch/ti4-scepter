@@ -80,6 +80,30 @@ GAMES_DIR = config.GAMES_DIR
 MAX_GAME_NAME_LENGTH = config.MAX_GAME_NAME_LENGTH
 MAX_PLAYERS = config.MAX_PLAYERS
 
+FRONTEND_DEV_MESSAGE = {
+    "message": "Frontend dev server running separately at http://localhost:5173."
+}
+
+
+def is_serving_static_assets():
+    """Check if Flask is configured to serve built frontend assets"""
+    return bool(app.static_folder)
+
+
+def serve_frontend_asset(asset: str):
+    """Serve a frontend asset when available"""
+    if not is_serving_static_assets():
+        return None
+
+    try:
+        return send_from_directory(app.static_folder, asset)
+    except FileNotFoundError:
+        logger.error("Requested frontend asset '%s' not found in %s", asset, app.static_folder)
+    except Exception as exc:
+        logger.error("Error serving frontend asset '%s': %s", asset, exc)
+
+    return None
+
 def ensure_games_directory():
     """Ensure the games directory exists"""
     if not os.path.exists(GAMES_DIR):
@@ -861,25 +885,33 @@ def handle_get_session_info():
 @app.route('/')
 def home():
     """Serve the main application"""
-    try:
-        return send_from_directory(app.static_folder, 'index.html')
-    except Exception as e:
-        logger.error(f"Error serving home page: {e}")
-        return "Application not found", 404
+    response = serve_frontend_asset('index.html')
+    if response is not None:
+        return response
+
+    logger.info("Frontend assets not served by Flask; returning dev server hint for home route")
+    return jsonify(FRONTEND_DEV_MESSAGE), 200
 
 @app.route('/<path:path>')
 def catch_all(path):
     """Catch-all route for React Router"""
-    try:
-        # Try to serve the requested file first
-        return send_from_directory(app.static_folder, path)
-    except:
-        # If file doesn't exist, serve index.html for client-side routing
+    if is_serving_static_assets():
         try:
-            return send_from_directory(app.static_folder, 'index.html')
-        except Exception as e:
-            logger.error(f"Error serving catch-all route for path '{path}': {e}")
-            return "Application not found", 404
+            # Try to serve the requested file first
+            return send_from_directory(app.static_folder, path)
+        except FileNotFoundError:
+            # If file doesn't exist, serve index.html for client-side routing
+            response = serve_frontend_asset('index.html')
+            if response is not None:
+                return response
+        except Exception as exc:
+            logger.error("Error serving catch-all route for path '%s': %s", path, exc)
+
+        logger.error("Application asset for path '%s' not found", path)
+        return "Application not found", 404
+
+    logger.info("Frontend assets requested from Flask while running dev server: %s", path)
+    return jsonify({"error": "Frontend assets are served by the Vite dev server during development."}), 404
 
 @app.errorhandler(404)
 def not_found(error):

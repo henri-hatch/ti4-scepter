@@ -24,6 +24,8 @@ class Config:
 class DevelopmentConfig(Config):
     """Development configuration"""
     DEBUG = True
+    STATIC_FOLDER = None
+    STATIC_URL_PATH = None
 
 class ProductionConfig(Config):
     """Production configuration"""
