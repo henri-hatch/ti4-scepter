@@ -18,8 +18,11 @@ def include_directory(root: Path, prefix: str):
         return entries
     for file_path in root.rglob('*'):
         if file_path.is_file():
-            relative = Path(prefix) / file_path.relative_to(root)
-            entries.append((str(file_path), str(relative)))
+            relative = file_path.relative_to(root)
+            destination = Path(prefix)
+            if relative.parent != Path('.'):
+                destination = destination / relative.parent
+            entries.append((str(file_path), str(destination)))
     return entries
 
 

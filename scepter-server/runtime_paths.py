@@ -43,11 +43,15 @@ def static_assets_dir() -> Optional[Path]:
     """Resolve the directory containing compiled frontend assets."""
     override = os.environ.get(_STATIC_DIR_ENV)
     if override:
-        return Path(override).resolve()
+        override_path = Path(override).resolve()
+        if override_path.exists():
+            return override_path
 
     bundle_dir = bundle_root()
     if bundle_dir is not None:
-        return (bundle_dir / "frontend").resolve()
+        candidate = (bundle_dir / "frontend").resolve()
+        if candidate.exists():
+            return candidate
 
     candidate = repository_root() / "scepter-client" / "dist"
     if candidate.exists():
