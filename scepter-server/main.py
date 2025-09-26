@@ -75,7 +75,14 @@ logger = logging.getLogger(__name__)
 
 # Initialize Flask app and SocketIO
 app = Flask(__name__, static_folder=config.STATIC_FOLDER, static_url_path=config.STATIC_URL_PATH)
-socketio = SocketIO(app, cors_allowed_origins="*", logger=False, engineio_logger=False)
+# Force threading async mode for compatibility with bundled executables
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    logger=False,
+    engineio_logger=False,
+    async_mode="threading"
+)
 
 # Configuration
 GAMES_DIR = config.GAMES_DIR

@@ -136,6 +136,8 @@ The server uses environment-based configuration:
 
 - `FLASK_ENV=development` (default) - Development mode with debug enabled
 - `FLASK_ENV=production` - Production mode with debug disabled
+- `SCEPTER_STATIC_DIR` - Override the resolved path to compiled frontend assets; packaged builds default to the embedded `frontend/` directory.
+- `SCEPTER_GAMES_DIR` - Override where SQLite game files are written; defaults to `games/` beside the executable when bundled.
 
 ## Database Schema
 
