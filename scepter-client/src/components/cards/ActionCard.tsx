@@ -12,6 +12,8 @@ type ActionCardProps = {
 
 function ActionCard({ card, onToggle, onRemove, disabled = false }: ActionCardProps) {
   const front = resolveAssetPath(card.asset)
+  const back = card.backAsset ? resolveAssetPath(card.backAsset) : front
+  const isLegendary = card.type === 'legendary'
 
   const handlePrimary = () => {
     if (disabled) {
@@ -28,17 +30,20 @@ function ActionCard({ card, onToggle, onRemove, disabled = false }: ActionCardPr
   }
 
   return (
-    <div className={`action-card-wrapper ${disabled ? 'is-disabled' : ''}`}>
+    <div className={`action-card-wrapper ${disabled ? 'is-disabled' : ''} ${isLegendary ? 'is-legendary' : ''}`}>
       <Card
         frontImage={front}
-        backImage={front}
+        backImage={back}
         alt={`${card.name} action card`}
         isFlipped={card.isExhausted}
         onPrimaryAction={handlePrimary}
         onSecondaryAction={handleSecondary}
         className="action-card"
       />
-      <div className="action-card-name">{card.name}</div>
+      <div className="action-card-meta">
+        <div className="action-card-name">{card.name}</div>
+        {isLegendary ? <div className="action-card-tag">Legendary</div> : null}
+      </div>
     </div>
   )
 }

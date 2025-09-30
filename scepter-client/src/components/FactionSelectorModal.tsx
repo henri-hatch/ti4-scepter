@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import '../styles/FactionSelectorModal.css'
 import type { FactionDefinition } from '../types/faction'
 import { resolveAssetPath } from '../utils/assets'
+import { formatIdentifier } from '../utils/technology'
 
 interface FactionSelectorModalProps {
   isOpen: boolean
@@ -185,7 +186,7 @@ function FactionSelectorModal({
                               <h3>Starting Technology</h3>
                               <ul>
                                 {faction.startingTech.map((tech) => (
-                                  <li key={tech}>{tech.replace(/_/g, ' ')}</li>
+                                  <li key={tech}>{formatIdentifier(tech)}</li>
                                 ))}
                               </ul>
                             </div>
@@ -195,7 +196,7 @@ function FactionSelectorModal({
                               <h3>Home Planet</h3>
                               <ul>
                                 {faction.homePlanet.map((planet) => (
-                                  <li key={planet}>{planet.replace(/_/g, ' ')}</li>
+                                  <li key={planet}>{formatIdentifier(planet)}</li>
                                 ))}
                               </ul>
                             </div>

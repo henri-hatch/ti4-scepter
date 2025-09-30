@@ -11,9 +11,11 @@ import ActionCard from '../cards/ActionCard'
 import ExplorationCard from '../cards/ExplorationCard'
 import StrategemCard from '../cards/StrategemCard'
 import RestoreRelicModal from './RestoreRelicModal'
+import RelicAttachmentModal from './RelicAttachmentModal'
 import type { PlayerActionCard, ActionCardDefinition } from '../../types/actions'
 import type { ExplorationCardDefinition, PlayerExplorationCard } from '../../types/exploration'
 import type { PlayerStrategem, StrategemDefinition } from '../../types/strategems'
+import type { PlayerPlanet } from '../../types/planets'
 import { resolveAssetPath } from '../../utils/assets'
 
 function sortByName<T extends { name: string }>(items: T[]): T[] {
@@ -56,8 +58,14 @@ function CardInventory() {
   const [drawModalOpen, setDrawModalOpen] = useState(false)
   const [manageActionModalOpen, setManageActionModalOpen] = useState(false)
 
+  const [playerPlanets, setPlayerPlanets] = useState<PlayerPlanet[]>([])
+  const [relicAttachmentTarget, setRelicAttachmentTarget] = useState<PlayerExplorationCard | null>(null)
+  const [relicAttachmentLoading, setRelicAttachmentLoading] = useState(false)
+  const [relicAttachmentBusy, setRelicAttachmentBusy] = useState(false)
+  const [relicAttachmentError, setRelicAttachmentError] = useState<string | null>(null)
+
   const explorationActions = useMemo(
-    () => exploration.filter((card) => card.subtype === 'action'),
+    () => exploration.filter((card) => card.subtype === 'action' && card.type !== 'Relic'),
     [exploration]
   )
 
@@ -67,17 +75,19 @@ function CardInventory() {
   )
 
   const relics = useMemo(
-    () => exploration.filter((card) => card.subtype === 'relic'),
+    () => exploration.filter((card) => card.type === 'Relic'),
     [exploration]
   )
 
   const manageableExploration = useMemo(
-    () => exploration.filter((card) => card.subtype === 'action' || card.subtype === 'relic_fragment'),
+    () => exploration.filter((card) => (
+      (card.subtype === 'action' && card.type !== 'Relic') || card.subtype === 'relic_fragment'
+    )),
     [exploration]
   )
 
   const availableRelicDefinitions = useMemo(
-    () => explorationDefinitions.filter((card) => card.subtype === 'relic'),
+    () => explorationDefinitions.filter((card) => card.type === 'Relic'),
     [explorationDefinitions]
   )
 
@@ -90,10 +100,19 @@ function CardInventory() {
       throw new Error('Failed to load action cards')
     }
     const payload = await response.json()
-    const rows: PlayerActionCard[] = (payload.actions ?? []).map((card: PlayerActionCard) => ({
-      ...card,
-      isExhausted: Boolean(card.isExhausted)
-    }))
+    const rows: PlayerActionCard[] = (payload.actions ?? []).map((card: PlayerActionCard) => {
+      const raw = card as unknown as {
+        backAsset?: string | null
+        assetBack?: string | null
+        type?: string
+      }
+      return {
+        ...card,
+        type: raw.type ?? card.type ?? 'standard',
+        backAsset: raw.backAsset ?? raw.assetBack ?? null,
+        isExhausted: Boolean(card.isExhausted)
+      }
+    })
     setActions(sortByName(rows))
   }, [gameName, playerId])
 
@@ -130,6 +149,27 @@ function CardInventory() {
     setStrategems(sortByName(rows))
   }, [gameName, playerId])
 
+  const fetchRelicAttachmentPlanets = useCallback(async () => {
+    if (!gameName || !playerId) {
+      return
+    }
+    const response = await fetch(`/api/game/${encodeURIComponent(gameName)}/player/${encodeURIComponent(playerId)}/planets`)
+    if (!response.ok) {
+      throw new Error('Failed to load planets')
+    }
+    const payload = await response.json()
+    const rows: PlayerPlanet[] = (payload.planets ?? []).map((planet: PlayerPlanet) => ({
+      ...planet,
+      techSpecialty: planet.techSpecialty ?? null,
+      isExhausted: Boolean(planet.isExhausted),
+      attachments: Array.isArray(planet.attachments)
+        ? planet.attachments.map((attachment) => ({ ...attachment }))
+        : []
+    }))
+    rows.sort((a, b) => a.name.localeCompare(b.name))
+    setPlayerPlanets(rows)
+  }, [gameName, playerId])
+
   const fetchInventory = useCallback(
     async ({ showError = true }: { showError?: boolean } = {}): Promise<boolean> => {
       if (!gameName || !playerId) {
@@ -164,6 +204,11 @@ function CardInventory() {
     setPendingStrategemDelete(null)
     setStrategemBusyKey(null)
     setStrategemTradeBusyKey(null)
+    setPlayerPlanets([])
+    setRelicAttachmentTarget(null)
+    setRelicAttachmentError(null)
+    setRelicAttachmentBusy(false)
+    setRelicAttachmentLoading(false)
     if (!gameName || !playerId) {
       return
     }
@@ -236,7 +281,20 @@ function CardInventory() {
         throw new Error('Failed to load action definitions')
       }
       const payload = await response.json()
-      const defs: ActionCardDefinition[] = payload.actions ?? []
+      const defs: ActionCardDefinition[] = (payload.actions ?? [])
+        .map((card: ActionCardDefinition) => {
+          const raw = card as unknown as {
+            backAsset?: string | null
+            assetBack?: string | null
+            type?: string
+          }
+          return {
+            ...card,
+            type: raw.type ?? card.type ?? 'standard',
+            backAsset: raw.backAsset ?? raw.assetBack ?? null
+          }
+        })
+        .filter((card: ActionCardDefinition) => card.type !== 'legendary')
       setActionDefinitions(sortByName(defs))
       setDefinitionsLoaded((prev) => ({ ...prev, actions: true }))
     } catch (err) {
@@ -254,7 +312,7 @@ function CardInventory() {
     setDefinitionsLoading((prev) => ({ ...prev, exploration: true }))
     try {
       const response = await fetch(
-        `/api/game/${encodeURIComponent(gameName)}/player/${encodeURIComponent(playerId)}/exploration/definitions?subtypes=action,relic_fragment,relic`
+        `/api/game/${encodeURIComponent(gameName)}/player/${encodeURIComponent(playerId)}/exploration/definitions?subtypes=action,relic_fragment,attach`
       )
       if (!response.ok) {
         throw new Error('Failed to load exploration definitions')
@@ -627,6 +685,69 @@ function CardInventory() {
     }
   }
 
+  const handleOpenRelicAttachment = useCallback(async (card: PlayerExplorationCard) => {
+    if (!gameName || !playerId) {
+      return
+    }
+    setRelicAttachmentTarget(card)
+    setRelicAttachmentError(null)
+    setRelicAttachmentLoading(true)
+    try {
+      await fetchRelicAttachmentPlanets()
+    } catch (err) {
+      console.error(err)
+      setPlayerPlanets([])
+      setRelicAttachmentError('Unable to load planets. Please try again.')
+    } finally {
+      setRelicAttachmentLoading(false)
+    }
+  }, [fetchRelicAttachmentPlanets, gameName, playerId])
+
+  const handleCloseRelicAttachment = useCallback(() => {
+    if (relicAttachmentBusy) {
+      return
+    }
+    setRelicAttachmentTarget(null)
+    setRelicAttachmentError(null)
+  }, [relicAttachmentBusy])
+
+  const handleAttachRelicToPlanet = useCallback(async (planet: PlayerPlanet) => {
+    if (!gameName || !playerId || !relicAttachmentTarget) {
+      return
+    }
+    setRelicAttachmentBusy(true)
+    setRelicAttachmentError(null)
+    try {
+      const response = await fetch(`/api/game/${encodeURIComponent(gameName)}/player/${encodeURIComponent(playerId)}/planets/${encodeURIComponent(planet.key)}/attachments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ explorationKey: relicAttachmentTarget.key })
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload.error || 'Unable to attach relic')
+      }
+
+      setExploration((previous) => previous.filter((item) => item.key !== relicAttachmentTarget.key))
+      setRelicAttachmentTarget(null)
+      setRelicAttachmentError(null)
+
+      const attachment = payload.attachment
+      if (attachment) {
+        setPlayerPlanets((previous) => previous.map((entry) => (
+          entry.key === planet.key
+            ? { ...entry, attachments: [...entry.attachments, attachment] }
+            : entry
+        )))
+      }
+    } catch (err) {
+      console.error(err)
+      setRelicAttachmentError(err instanceof Error ? err.message : 'Unable to attach relic.')
+    } finally {
+      setRelicAttachmentBusy(false)
+    }
+  }, [gameName, playerId, relicAttachmentTarget])
+
   const removeExplorationDefinition = useCallback((definition: ExplorationCardDefinition) => {
     setExplorationDefinitions((previous) => previous.filter((item) => item.key !== definition.key))
   }, [])
@@ -956,16 +1077,25 @@ function CardInventory() {
         <hr className="card-inventory-divider" />
         {relics.length > 0 ? (
           <div className="card-inventory-grid">
-            {relics.map((card) => (
-              <ExplorationCard
-                key={card.key}
-                card={card}
-                onSecondaryAction={(item) => setPendingExplorationDelete(item)}
-                onRemove={(item) => setPendingExplorationDelete(item)}
-                secondaryActionLabel="Hold or right-click to remove"
-                disabled={explorationBusyKey === card.key}
-              />
-            ))}
+            {relics.map((card) => {
+              const isActionRelic = card.subtype === 'action'
+              const isAttachRelic = card.subtype === 'attach'
+              const cardDisabled =
+                explorationBusyKey === card.key ||
+                (relicAttachmentBusy && relicAttachmentTarget?.key === card.key)
+              return (
+                <ExplorationCard
+                  key={card.key}
+                  card={card}
+                  onToggle={isActionRelic ? handleToggleExploration : undefined}
+                  onPrimaryAction={isAttachRelic ? handleOpenRelicAttachment : undefined}
+                  onSecondaryAction={(item) => setPendingExplorationDelete(item)}
+                  onRemove={(item) => setPendingExplorationDelete(item)}
+                  secondaryActionLabel={isAttachRelic ? 'Tap to attach · hold to remove' : 'Hold or right-click to remove'}
+                  disabled={cardDisabled}
+                />
+              )
+            })}
           </div>
         ) : (
           <div className="card-inventory-empty">No relics restored yet.</div>
@@ -1086,6 +1216,17 @@ function CardInventory() {
           setRestoreInitialFragment(null)
         }}
         onRestore={handleRestoreRelic}
+      />
+
+      <RelicAttachmentModal
+        relic={relicAttachmentTarget}
+        planets={playerPlanets}
+        isOpen={Boolean(relicAttachmentTarget)}
+        loading={relicAttachmentLoading}
+        busy={relicAttachmentBusy}
+        error={relicAttachmentError}
+        onClose={handleCloseRelicAttachment}
+        onAttach={handleAttachRelicToPlanet}
       />
 
       {pendingStrategemDelete ? (

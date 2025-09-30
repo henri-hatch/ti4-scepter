@@ -419,7 +419,8 @@ def list_available_exploration_definitions(
   db_path: str,
   player_id: str,
   subtypes: Iterable[str],
-  exclude_planet_key: Optional[str] = None
+  exclude_planet_key: Optional[str] = None,
+  types: Optional[Iterable[str]] = None
 ) -> List[Dict]:
   """Return exploration definitions filtered by subtype and player ownership."""
   ensure_exploration_tables(db_path)
@@ -430,7 +431,16 @@ def list_available_exploration_definitions(
     return []
 
   placeholders = ','.join('?' for _ in subtype_list)
-  params: List = subtype_list + [player_id]
+  params: List = list(subtype_list)
+
+  type_list = list(types) if types else []
+  type_clause = ''
+  if type_list:
+    type_placeholders = ','.join('?' for _ in type_list)
+    type_clause = f' AND ed.type IN ({type_placeholders})'
+    params.extend(type_list)
+
+  params.append(player_id)
 
   rows = execute_query(
     db_path,
@@ -442,6 +452,7 @@ def list_available_exploration_definitions(
                ed.asset
         FROM explorationDefinitions ed
         WHERE ed.subtype IN ({placeholders})
+          {type_clause}
           AND ed.explorationKey NOT IN (
             SELECT explorationKey FROM playerExplorationCards WHERE playerId = ?
           )
@@ -450,15 +461,32 @@ def list_available_exploration_definitions(
     fetch_all=True
   ) or []
 
-  # Optionally exclude attachments already on a planet if requested
-  if exclude_planet_key:
-    attached = execute_query(
-      db_path,
-      "SELECT explorationKey FROM planetAttachments WHERE playerId = ? AND planetKey = ?",
-      (player_id, exclude_planet_key),
-      fetch_all=True
-    ) or []
-    attached_keys = {row['explorationKey'] for row in attached}
-    rows = [row for row in rows if row['key'] not in attached_keys]
+  attachment_rows = execute_query(
+    db_path,
+    "SELECT explorationKey, planetKey FROM planetAttachments WHERE playerId = ?",
+    (player_id,),
+    fetch_all=True
+  ) or []
 
-  return rows
+  attached_global = {row['explorationKey'] for row in attachment_rows}
+  attachments_by_planet: Dict[str, set[str]] = {}
+  for row in attachment_rows:
+    planet_key = row.get('planetKey')
+    if not planet_key:
+      continue
+    attachments_by_planet.setdefault(planet_key, set()).add(row['explorationKey'])
+
+  filtered_rows: List[Dict] = []
+  for row in rows:
+    key = row.get('key')
+    subtype = row.get('subtype')
+    card_type = row.get('type')
+    if card_type == 'Relic' and key in attached_global:
+      continue
+    if exclude_planet_key and subtype == 'attach':
+      planet_set = attachments_by_planet.get(exclude_planet_key, set())
+      if key in planet_set:
+        continue
+    filtered_rows.append(row)
+
+  return filtered_rows

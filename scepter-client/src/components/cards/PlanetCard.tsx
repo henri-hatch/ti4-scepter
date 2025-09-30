@@ -3,6 +3,7 @@ import Card from './Card'
 import type { PlayerPlanet } from '../../types/planets'
 import '../../styles/PlanetCard.css'
 import { resolveAssetPath } from '../../utils/assets'
+import { formatIdentifier } from '../../utils/technology'
 
 type PlanetCardProps = {
   planet: PlayerPlanet
@@ -38,7 +39,16 @@ function PlanetCard({ planet, onPrimaryAction, onSecondaryAction }: PlanetCardPr
         ) : (
           <div className="planet-card-tech planet-card-tech--none">No Tech Specialty</div>
         )}
-        {planet.legendary ? <div className="planet-card-legendary">Legendary</div> : null}
+        {planet.legendary ? (
+          <div className="planet-card-legendary">
+            <span className="planet-card-legendary-label">Legendary</span>
+            {planet.legendaryAbility ? (
+              <span className="planet-card-legendary-ability">
+                {formatIdentifier(planet.legendaryAbility)}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </div>
   )

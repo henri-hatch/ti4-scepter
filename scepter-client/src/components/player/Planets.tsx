@@ -9,6 +9,7 @@ import CardDrawModal from './CardDrawModal'
 import ManageAttachmentsModal from './ManageAttachmentsModal'
 import AttachmentViewerModal from './AttachmentViewerModal'
 import { resolveAssetPath } from '../../utils/assets'
+import { formatIdentifier } from '../../utils/technology'
 import type { PlanetDefinition, PlayerPlanet } from '../../types/planets'
 import type { PlanetAttachment, ExplorationCardDefinition } from '../../types/exploration'
 
@@ -55,6 +56,7 @@ function Planets() {
       const rows: PlayerPlanet[] = (payload.planets ?? []).map((planet: PlayerPlanet) => ({
         ...planet,
         techSpecialty: planet.techSpecialty ?? null,
+        legendaryAbility: planet.legendaryAbility ?? null,
         isExhausted: Boolean(planet.isExhausted),
         attachments: Array.isArray(planet.attachments)
           ? planet.attachments.map((attachment: PlanetAttachment) => ({ ...attachment }))
@@ -88,7 +90,8 @@ function Planets() {
       const payload = await response.json()
       const definitions: PlanetDefinition[] = (payload.planets ?? []).map((planet: PlanetDefinition) => ({
         ...planet,
-        techSpecialty: planet.techSpecialty ?? null
+        techSpecialty: planet.techSpecialty ?? null,
+        legendaryAbility: planet.legendaryAbility ?? null
       }))
       definitions.sort((a, b) => a.name.localeCompare(b.name))
       setCatalog(definitions)
@@ -136,6 +139,7 @@ function Planets() {
         ...planet,
         ...saved,
         techSpecialty: saved.techSpecialty ?? planet.techSpecialty ?? null,
+        legendaryAbility: saved.legendaryAbility ?? planet.legendaryAbility ?? null,
         isExhausted: Boolean(saved.isExhausted),
         attachments: []
       }
@@ -144,7 +148,10 @@ function Planets() {
         updated.sort((a, b) => a.name.localeCompare(b.name))
         return updated
       })
-      setStatusMessage(`${planet.name} added to your roster.`)
+      const abilityMessage = merged.legendaryAbility
+        ? ` Legendary action ${formatIdentifier(merged.legendaryAbility)} added to your action cards.`
+        : ''
+      setStatusMessage(`${planet.name} added to your roster.${abilityMessage}`)
       if (catalogLoaded) {
         setCatalog((previous) => previous.filter((item) => item.key !== planet.key))
       }
@@ -214,7 +221,8 @@ function Planets() {
               influence: planetPendingDeletion.influence,
               legendary: planetPendingDeletion.legendary,
               assetFront: planetPendingDeletion.assetFront,
-              assetBack: planetPendingDeletion.assetBack
+              assetBack: planetPendingDeletion.assetBack,
+              legendaryAbility: planetPendingDeletion.legendaryAbility
             }
             updated.push(definition)
             updated.sort((a, b) => a.name.localeCompare(b.name))
@@ -222,7 +230,10 @@ function Planets() {
           return updated
         })
       }
-      setStatusMessage(`${planetPendingDeletion.name} removed from your roster.`)
+      const abilityMessage = planetPendingDeletion.legendaryAbility
+        ? ` Legendary action ${formatIdentifier(planetPendingDeletion.legendaryAbility)} removed from your action cards.`
+        : ''
+      setStatusMessage(`${planetPendingDeletion.name} removed from your roster.${abilityMessage}`)
       setPlanetPendingDeletion(null)
     } catch (err) {
       console.error(err)

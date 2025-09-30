@@ -97,6 +97,12 @@ def _normalise_action_rows(rows: Sequence[ActionRow]) -> List[ActionRow]:
   normalised: List[ActionRow] = []
   for row in rows:
     item = dict(row)
+    if not item.get('type'):
+      item['type'] = 'standard'
+    if 'assetBack' in item and 'backAsset' not in item:
+      item['backAsset'] = item.pop('assetBack')
+    if 'backAsset' not in item:
+      item['backAsset'] = None
     if 'isExhausted' in item:
       item['isExhausted'] = bool(item.get('isExhausted', 0))
     normalised.append(item)
@@ -164,6 +170,8 @@ def list_player_actions(game_name: str, player_id: str, games_dir: str) -> Tuple
           SELECT pa.actionKey AS key,
                  ad.name,
                  ad.asset,
+                 ad.type,
+                 ad.assetBack AS backAsset,
                  pa.isExhausted,
                  pa.acquiredAt
           FROM playerActions pa
@@ -207,7 +215,11 @@ def list_player_action_definitions(game_name: str, player_id: str, games_dir: st
     return {"error": "Unable to load action cards"}, 500
 
   owned = {row['actionKey'] for row in owned_rows}
-  available = [definition for definition in definitions if definition['key'] not in owned]
+  available = [
+    definition
+    for definition in definitions
+    if definition['key'] not in owned and definition.get('type') != 'legendary'
+  ]
   return {"actions": available}, 200
 
 
@@ -355,7 +367,11 @@ def draw_random_action(game_name: str, player_id: str, games_dir: str) -> Tuple[
     return {"error": "Unable to draw action card"}, 500
 
   owned = {row['actionKey'] for row in owned_rows}
-  available = [definition for definition in definitions if definition['key'] not in owned]
+  available = [
+    definition
+    for definition in definitions
+    if definition['key'] not in owned and definition.get('type') != 'legendary'
+  ]
 
   if not available:
     return {"error": "No action cards available to draw"}, 409
@@ -388,7 +404,8 @@ def list_player_exploration_definitions(
   player_id: str,
   subtypes: Sequence[str],
   games_dir: str,
-  planet_key: Optional[str] = None
+  planet_key: Optional[str] = None,
+  types: Optional[Sequence[str]] = None
 ) -> Tuple[Dict[str, Any], int]:
   """Return exploration definitions filtered by subtype for manual selection."""
   valid, db_path = _ensure_game_database(game_name, games_dir)
@@ -399,7 +416,7 @@ def list_player_exploration_definitions(
     ensure_exploration_tables(db_path)
     populate_exploration_definitions(db_path)
     exclude_planet = planet_key if any(subtype == 'attach' for subtype in subtypes) else None
-    definitions = list_available_exploration_definitions(db_path, player_id, subtypes, exclude_planet)
+    definitions = list_available_exploration_definitions(db_path, player_id, subtypes, exclude_planet, types)
   except (ExplorationCatalogError, DatabaseError) as exc:
     logger.error("Failed to load exploration definitions for '%s': %s", game_name, exc)
     return {"error": "Exploration catalog unavailable"}, 500
@@ -1124,8 +1141,20 @@ def add_attachment_to_planet(
   if attachment is None:
     return {"error": "Attachment already present"}, 409
 
-  update_game_timestamp(db_path)
   attachment_dict = dict(attachment)
+
+  if attachment_dict.get('type') == 'Relic':
+    try:
+      execute_query(
+        db_path,
+        "DELETE FROM playerExplorationCards WHERE playerId = ? AND explorationKey = ?",
+        (player_id, attachment_dict.get('key')),
+        fetch_all=False
+      )
+    except DatabaseError as exc:
+      logger.error("Failed to remove relic '%s' from inventory in '%s': %s", attachment_dict.get('key'), game_name, exc)
+
+  update_game_timestamp(db_path)
   return {"attachment": attachment_dict}, 201
 
 
@@ -1151,6 +1180,21 @@ def remove_attachment_from_planet(
 
   if not deleted:
     return {"error": "Attachment not found on planet"}, 404
+
+  definition = get_exploration_definition(db_path, exploration_key)
+  if definition and definition.get('type') == 'Relic':
+    try:
+      added = add_player_exploration_card(db_path, player_id, exploration_key)
+      if added is None:
+        logger.debug(
+          "Relic '%s' already present in inventory when detaching from planet '%s'",
+          exploration_key,
+          planet_key
+        )
+    except ExplorationCatalogError as exc:
+      logger.error("Failed to restore relic '%s' to inventory in '%s': %s", exploration_key, game_name, exc)
+    except DatabaseError as exc:
+      logger.error("Database error restoring relic '%s' to inventory in '%s': %s", exploration_key, game_name, exc)
 
   update_game_timestamp(db_path)
   return {"success": True}, 200
@@ -1222,7 +1266,7 @@ def restore_relic_from_fragments(
   restored_type = next(iter(non_frontier_types), 'Frontier')
 
   try:
-    available_relics = list_available_exploration_definitions(db_path, player_id, ['relic'])
+    available_relics = list_available_exploration_definitions(db_path, player_id, ['action', 'attach'], types=['Relic'])
   except (ExplorationCatalogError, DatabaseError) as exc:
     logger.error("Failed to fetch relic catalog for '%s': %s", game_name, exc)
     return {"error": "Relic catalog unavailable"}, 500

@@ -23,8 +23,8 @@ Scepter is built using React Typescript and Flask Python for the backend. It is 
 [Backend README](scepter-server/README.md)
 
 ## Desktop Builds with PyInstaller
-- Ensure prerequisites are installed on the host OS: Node.js 18+, Python 3.10+, PyInstaller 6.16+, and (on Linux) `appimagetool` for optional AppImage output.
+- Ensure prerequisites are installed on the host OS: Node.js 18+, Python 3.10+, and PyInstaller 6.16+.
 - Run `python packaging/pyinstaller/build.py --target <windows|macos|linux>` to compile the React frontend, package the Flask backend, and emit platform-specific bundles in `dist/distributables/<target>/`.
-- Windows and Linux targets produce single-file executables named `Scepter.exe` and `Scepter`; macOS builds emit a `.app` bundle. When available, the script also wraps the Linux binary into `Scepter.AppImage`.
+- Windows and Linux targets produce single-file executables named `Scepter.exe` and `Scepter`; macOS builds emit a `.app` bundle.
 - Packaged builds load static assets from the embedded `frontend` directory and persist save files to a `games/` folder created beside the executable (inside `Scepter.app/Contents/MacOS` on macOS).
 - Override defaults when needed with `SCEPTER_STATIC_DIR` and `SCEPTER_GAMES_DIR` environment variables before launching the packaged binary.

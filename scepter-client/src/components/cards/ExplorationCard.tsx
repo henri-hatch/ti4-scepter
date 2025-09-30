@@ -11,6 +11,7 @@ type ExplorationCardProps = {
   onSecondaryAction?: (card: PlayerExplorationCard) => void
   secondaryActionLabel?: string
   showRemoveButton?: boolean
+  onPrimaryAction?: (card: PlayerExplorationCard) => void
 }
 
 function ExplorationCard({
@@ -20,18 +21,27 @@ function ExplorationCard({
   disabled = false,
   onSecondaryAction,
   secondaryActionLabel,
-  showRemoveButton = false
+  showRemoveButton = false,
+  onPrimaryAction
 }: ExplorationCardProps) {
   const front = resolveAssetPath(card.asset)
   const canToggle = card.subtype === 'action' && Boolean(onToggle)
   const secondaryHandler = onSecondaryAction ?? onRemove
 
   const handlePrimary = () => {
-    if (!canToggle || disabled) {
+    if (disabled) {
       return
     }
-    onToggle?.(card)
+    if (canToggle) {
+      onToggle?.(card)
+      return
+    }
+    if (onPrimaryAction) {
+      onPrimaryAction(card)
+    }
   }
+
+  const hasPrimaryAction = canToggle || Boolean(onPrimaryAction)
 
   const handleSecondary = () => {
     if (disabled || !secondaryHandler) {
@@ -47,7 +57,7 @@ function ExplorationCard({
         backImage={front}
         alt={`${card.name} exploration card`}
         isFlipped={canToggle ? card.isExhausted : false}
-        onPrimaryAction={canToggle ? handlePrimary : undefined}
+        onPrimaryAction={hasPrimaryAction ? handlePrimary : undefined}
         onSecondaryAction={(onSecondaryAction || showRemoveButton) ? handleSecondary : undefined}
         className={`exploration-card exploration-card--${card.subtype}`}
       />

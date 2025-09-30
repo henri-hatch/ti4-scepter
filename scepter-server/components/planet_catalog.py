@@ -5,7 +5,7 @@ import os
 from functools import lru_cache
 from typing import Dict, List, Optional
 
-from .database import execute_query, execute_script, get_db_connection
+from .database import execute_query, execute_script, get_db_connection, DatabaseError
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,8 @@ def load_planet_catalog() -> List[Dict]:
             'influence': entry['influence'],
             'legendary': bool(entry['legendary']),
             'assetFront': entry['assetFront'],
-            'assetBack': entry['assetBack']
+            'assetBack': entry['assetBack'],
+            'legendaryAbility': entry.get('legendaryAbility')
         })
 
     return normalised
@@ -72,7 +73,8 @@ def ensure_planet_tables(db_path: str) -> None:
             influence INTEGER NOT NULL,
             legendary INTEGER NOT NULL DEFAULT 0,
             assetFront TEXT NOT NULL,
-            assetBack TEXT NOT NULL
+            assetBack TEXT NOT NULL,
+            legendaryAbility TEXT
         );
 
         CREATE TABLE IF NOT EXISTS playerPlanets (
@@ -90,6 +92,15 @@ def ensure_planet_tables(db_path: str) -> None:
 
     execute_script(db_path, schema)
 
+    try:
+        execute_query(
+            db_path,
+            "ALTER TABLE planetDefinitions ADD COLUMN legendaryAbility TEXT",
+            fetch_all=False
+        )
+    except DatabaseError:
+        pass
+
 
 def populate_planet_definitions(db_path: str) -> None:
     """Populate the planetDefinitions table using the JSON catalog if required."""
@@ -106,8 +117,35 @@ def populate_planet_definitions(db_path: str) -> None:
             existing_keys = {row['planetKey'] for row in existing}
 
             rows_to_insert = []
+            changes_made = False
             for planet in catalog:
                 if planet['key'] in existing_keys:
+                    cursor.execute(
+                        '''UPDATE planetDefinitions
+                             SET name = ?,
+                                 type = ?,
+                                 techSpecialty = ?,
+                                 resources = ?,
+                                 influence = ?,
+                                 legendary = ?,
+                                 assetFront = ?,
+                                 assetBack = ?,
+                                 legendaryAbility = ?
+                           WHERE planetKey = ?''',
+                        (
+                            planet['name'],
+                            planet['type'],
+                            planet['techSpecialty'],
+                            planet['resources'],
+                            planet['influence'],
+                            1 if planet['legendary'] else 0,
+                            planet['assetFront'],
+                            planet['assetBack'],
+                            planet.get('legendaryAbility'),
+                            planet['key']
+                        )
+                    )
+                    changes_made = True
                     continue
                 rows_to_insert.append((
                     planet['key'],
@@ -118,7 +156,8 @@ def populate_planet_definitions(db_path: str) -> None:
                     planet['influence'],
                     1 if planet['legendary'] else 0,
                     planet['assetFront'],
-                    planet['assetBack']
+                    planet['assetBack'],
+                    planet.get('legendaryAbility')
                 ))
 
             if rows_to_insert:
@@ -132,10 +171,14 @@ def populate_planet_definitions(db_path: str) -> None:
                         influence,
                         legendary,
                         assetFront,
-                        assetBack
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                        assetBack,
+                        legendaryAbility
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                     rows_to_insert
                 )
+                changes_made = True
+
+            if changes_made:
                 connection.commit()
     except Exception as exc:
         logger.error("Failed to populate planet definitions: %s", exc)
@@ -149,7 +192,7 @@ def get_planet_definition(db_path: str, planet_key: str) -> Optional[Dict]:
 
     return execute_query(
         db_path,
-        "SELECT planetKey as key, name, type, techSpecialty, resources, influence, legendary, assetFront, assetBack FROM planetDefinitions WHERE planetKey = ?",
+        "SELECT planetKey as key, name, type, techSpecialty, resources, influence, legendary, assetFront, assetBack, legendaryAbility FROM planetDefinitions WHERE planetKey = ?",
         (planet_key,),
         fetch_one=True
     )
@@ -171,7 +214,8 @@ def list_planet_definitions(db_path: str) -> List[Dict]:
                    influence,
                    legendary,
                    assetFront,
-                   assetBack
+                   assetBack,
+                   legendaryAbility
             FROM planetDefinitions
             ORDER BY name
         """,

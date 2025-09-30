@@ -5,7 +5,7 @@ import os
 from functools import lru_cache
 from typing import Dict, List, Optional
 
-from .database import execute_query, execute_script, get_db_connection
+from .database import execute_query, execute_script, get_db_connection, DatabaseError
 
 logger = logging.getLogger(__name__)
 
@@ -45,10 +45,18 @@ def load_action_catalog() -> List[Dict]:
       logger.warning("Skipping action card entry missing required keys: %s", entry)
       continue
 
+    raw_type = str(entry.get('type', 'standard')).lower()
+    action_type = 'legendary' if raw_type == 'legendary' else 'standard'
+    back_asset = entry.get('backAsset')
+    if back_asset is not None and not isinstance(back_asset, str):
+      back_asset = None
+
     normalised.append({
       'key': entry['key'],
       'name': entry['name'],
-      'asset': entry['asset']
+      'asset': entry['asset'],
+      'type': action_type,
+      'backAsset': back_asset
     })
 
   return normalised
@@ -60,7 +68,9 @@ def ensure_action_tables(db_path: str) -> None:
       CREATE TABLE IF NOT EXISTS actionDefinitions (
           actionKey TEXT PRIMARY KEY,
           name TEXT NOT NULL,
-          asset TEXT NOT NULL
+          asset TEXT NOT NULL,
+          type TEXT NOT NULL DEFAULT 'standard',
+          assetBack TEXT
       );
 
       CREATE TABLE IF NOT EXISTS playerActions (
@@ -78,6 +88,24 @@ def ensure_action_tables(db_path: str) -> None:
 
   execute_script(db_path, schema)
 
+  try:
+    execute_query(
+      db_path,
+      "ALTER TABLE actionDefinitions ADD COLUMN type TEXT NOT NULL DEFAULT 'standard'",
+      fetch_all=False
+    )
+  except DatabaseError:
+    pass
+
+  try:
+    execute_query(
+      db_path,
+      "ALTER TABLE actionDefinitions ADD COLUMN assetBack TEXT",
+      fetch_all=False
+    )
+  except DatabaseError:
+    pass
+
 
 def populate_action_definitions(db_path: str) -> None:
   """Populate the actionDefinitions table using the JSON catalog if required."""
@@ -94,13 +122,32 @@ def populate_action_definitions(db_path: str) -> None:
       existing_keys = {row['actionKey'] for row in existing}
 
       rows_to_insert = []
+      changes_made = False
       for action in catalog:
         if action['key'] in existing_keys:
+          cursor.execute(
+            '''UPDATE actionDefinitions
+                 SET name = ?,
+                     asset = ?,
+                     type = ?,
+                     assetBack = ?
+               WHERE actionKey = ?''',
+            (
+              action['name'],
+              action['asset'],
+              action.get('type', 'standard'),
+              action.get('backAsset'),
+              action['key']
+            )
+          )
+          changes_made = True
           continue
         rows_to_insert.append((
           action['key'],
           action['name'],
-          action['asset']
+          action['asset'],
+          action.get('type', 'standard'),
+          action.get('backAsset')
         ))
 
       if rows_to_insert:
@@ -108,10 +155,15 @@ def populate_action_definitions(db_path: str) -> None:
           '''INSERT INTO actionDefinitions (
               actionKey,
               name,
-              asset
-          ) VALUES (?, ?, ?)''',
+              asset,
+              type,
+              assetBack
+          ) VALUES (?, ?, ?, ?, ?)''',
           rows_to_insert
         )
+        changes_made = True
+
+      if changes_made:
         connection.commit()
   except Exception as exc:
     logger.error("Failed to populate action definitions: %s", exc)
@@ -128,7 +180,9 @@ def get_action_definition(db_path: str, action_key: str) -> Optional[Dict]:
     """
         SELECT actionKey AS key,
                name,
-               asset
+               asset,
+               type,
+               assetBack AS backAsset
         FROM actionDefinitions
         WHERE actionKey = ?
     """,
@@ -147,7 +201,9 @@ def list_action_definitions(db_path: str) -> List[Dict]:
     """
         SELECT actionKey AS key,
                name,
-               asset
+               asset,
+               type,
+               assetBack AS backAsset
         FROM actionDefinitions
         ORDER BY name
     """,

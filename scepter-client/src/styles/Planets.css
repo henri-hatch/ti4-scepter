@@ -212,6 +212,25 @@
   color: rgba(250, 204, 21, 0.8);
 }
 
+.planet-modal-item-legendary {
+  margin-top: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.65rem;
+  color: #fbbf24;
+}
+
+.planet-modal-item-legendary-label {
+  font-weight: 600;
+}
+
+.planet-modal-item-legendary-ability {
+  color: rgba(224, 231, 255, 0.85);
+}
+
 .planet-modal-empty {
   grid-column: 1 / -1;
   text-align: center;

@@ -35,7 +35,11 @@ function ManageAttachmentsModal({
       if (!normalizedType) {
         return true
       }
-      return (item.type ?? '').toLowerCase() === normalizedType
+      const itemType = (item.type ?? '').toLowerCase()
+      if (itemType === 'relic') {
+        return true
+      }
+      return itemType === normalizedType
     }
     const typeFilteredCandidates = available.filter(matchesType)
 

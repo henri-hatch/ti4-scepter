@@ -1,6 +1,7 @@
 import CardSelectionModal from './CardSelectionModal'
 import type { PlanetDefinition } from '../../types/planets'
 import { resolveAssetPath } from '../../utils/assets'
+import { formatIdentifier } from '../../utils/technology'
 import '../../styles/Planets.css'
 
 type AddPlanetModalProps = {
@@ -41,6 +42,16 @@ function AddPlanetModal({ isOpen, onClose, planets, onAddPlanet, disabled = fals
                 <div className="planet-modal-item-sub">
                   {planet.techSpecialty ?? 'No Tech Specialty'}
                 </div>
+                {planet.legendary ? (
+                  <div className="planet-modal-item-legendary">
+                    <span className="planet-modal-item-legendary-label">Legendary</span>
+                    {planet.legendaryAbility ? (
+                      <span className="planet-modal-item-legendary-ability">
+                        {formatIdentifier(planet.legendaryAbility)}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             </button>
           )

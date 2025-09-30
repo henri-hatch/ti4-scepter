@@ -15,6 +15,14 @@
   width: 100%;
 }
 
+.action-card-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+}
+
 .action-card .card-face--back img {
   filter: grayscale(100%) saturate(0.2) brightness(0.65);
 }
@@ -40,6 +48,51 @@
   color: rgba(226, 232, 240, 0.9);
   font-size: 0.85rem;
   letter-spacing: 0.04em;
+}
+
+.action-card-tag {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(129, 140, 248, 0.3);
+  color: rgba(224, 231, 255, 0.92);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.action-card-wrapper.is-legendary .action-card-tag {
+  background: rgba(96, 165, 250, 0.35);
+  color: rgba(219, 234, 254, 0.95);
+}
+
+.action-card-wrapper.is-legendary .card-face--front {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-card-wrapper.is-legendary .card-face--front img {
+  width: auto;
+  height: 100%;
+  max-width: none;
+  transform: rotate(90deg) scale(0.72);
+  transform-origin: center;
+  object-fit: contain;
+}
+
+.action-card-wrapper.is-legendary .card-face--back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-card-wrapper.is-legendary .card-face--back img {
+  width: auto;
+  height: 100%;
+  max-width: none;
+  transform: rotate(90deg) scale(0.72);
+  transform-origin: center;
+  object-fit: contain;
 }
 
 @media (max-width: 640px) {

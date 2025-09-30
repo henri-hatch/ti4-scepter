@@ -17,6 +17,7 @@ from components.exploration_catalog import (
     ExplorationCatalogError
 )
 from routes.games import get_game_db_path, update_game_timestamp
+from routes.cards import add_player_action as grant_player_action, remove_player_action as revoke_player_action
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,8 @@ def _normalise_planet_rows(rows: List[Dict], attachments: Optional[Dict[str, Lis
     for row in rows:
         converted = {
             **row,
-            'legendary': bool(row.get('legendary', 0))
+            'legendary': bool(row.get('legendary', 0)),
+            'legendaryAbility': row.get('legendaryAbility')
         }
         if 'isExhausted' in row:
             converted['isExhausted'] = bool(row.get('isExhausted', 0))
@@ -77,15 +79,16 @@ def list_player_planets(game_name: str, player_id: str, games_dir: str) -> Tuple
         rows = execute_query(
             db_path,
             """
-                SELECT pp.planetKey as key,
-                       pd.name,
-                       pd.type,
-                       pd.techSpecialty,
-                       pd.resources,
-                       pd.influence,
-                       pd.legendary,
-                       pd.assetFront,
+               SELECT pp.planetKey as key,
+                      pd.name,
+                      pd.type,
+                      pd.techSpecialty,
+                      pd.resources,
+                      pd.influence,
+                      pd.legendary,
+                      pd.assetFront,
                        pd.assetBack,
+                       pd.legendaryAbility,
                        pp.isExhausted
                 FROM playerPlanets pp
                 JOIN planetDefinitions pd ON pd.planetKey = pp.planetKey
@@ -146,7 +149,30 @@ def add_player_planet(game_name: str, player_id: str, planet_key: str, games_dir
     update_game_timestamp(db_path)
 
     definition['legendary'] = bool(definition.get('legendary', 0))
+    definition['legendaryAbility'] = definition.get('legendaryAbility')
     definition['isExhausted'] = False
+
+    ability_key = definition.get('legendaryAbility')
+    if ability_key:
+        try:
+            _, status = grant_player_action(game_name, player_id, ability_key, games_dir)
+            if status not in (200, 201, 409):
+                logger.warning(
+                    "Granting legendary action '%s' for planet '%s' in '%s' returned status %s",
+                    ability_key,
+                    planet_key,
+                    game_name,
+                    status
+                )
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.error(
+                "Failed to grant legendary action '%s' for planet '%s' in '%s': %s",
+                ability_key,
+                planet_key,
+                game_name,
+                exc
+            )
+
     return {"planet": definition}, 201
 
 
@@ -192,6 +218,9 @@ def remove_player_planet(game_name: str, player_id: str, planet_key: str, games_
 
     ensure_planet_tables(db_path)
 
+    definition = get_planet_definition(db_path, planet_key)
+    ability_key = definition.get('legendaryAbility') if definition else None
+
     try:
         deleted = execute_query(
             db_path,
@@ -207,6 +236,27 @@ def remove_player_planet(game_name: str, player_id: str, planet_key: str, games_
         return {"error": "Planet not assigned to player"}, 404
 
     update_game_timestamp(db_path)
+
+    if ability_key:
+        try:
+            _, status = revoke_player_action(game_name, player_id, ability_key, games_dir)
+            if status not in (200, 404):
+                logger.warning(
+                    "Removing legendary action '%s' for planet '%s' in '%s' returned status %s",
+                    ability_key,
+                    planet_key,
+                    game_name,
+                    status
+                )
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.error(
+                "Failed to revoke legendary action '%s' for planet '%s' in '%s': %s",
+                ability_key,
+                planet_key,
+                game_name,
+                exc
+            )
+
     return {"success": True}, 200
 
 

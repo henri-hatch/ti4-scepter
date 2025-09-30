@@ -11,6 +11,7 @@ import type { ActionCardDefinition, PlayerActionCard } from '../../types/actions
 import type { PlayerPlanet } from '../../types/planets'
 import type { PlayerTechnology, TechnologyDefinition, TechnologyType } from '../../types/technology'
 import { resolveAssetPath } from '../../utils/assets'
+import { formatFactionLabel } from '../../utils/technology'
 import FactionSelectorModal from '../FactionSelectorModal'
 import type { FactionDefinition } from '../../types/faction'
 import {
@@ -61,17 +62,6 @@ function sortTechnology<T extends SortableTechnology>(items: T[]): void {
     }
     return a.name.localeCompare(b.name)
   })
-}
-
-function formatFactionLabel(key: string | null): string {
-  if (!key) {
-    return 'None selected'
-  }
-  return key
-    .split(/[_-]/)
-    .filter(Boolean)
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(' ')
 }
 
 function getSlotTechnologyKey(slot: UnitSlotKey, factionKey: string | null): string {
@@ -603,7 +593,7 @@ function Overview() {
     }>
   }, [boardFace, playerFaction, unitTechnologyMap])
 
-  const factionLabel = formatFactionLabel(playerFaction)
+  const factionLabel = formatFactionLabel(playerFaction) || 'None selected'
 
   const currentTradeGoods = profile?.tradeGoods ?? 0
   const currentCommodities = profile?.commodities ?? 0

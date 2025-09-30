@@ -61,11 +61,24 @@
 }
 
 .planet-card-legendary {
-  font-size: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: #fbbf24;
-  text-align: center;
+  font-size: 0.72rem;
+}
+
+.planet-card-legendary-label {
+  font-weight: 600;
+}
+
+.planet-card-legendary-ability {
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  color: rgba(224, 231, 255, 0.85);
 }
 
 .planet-card {

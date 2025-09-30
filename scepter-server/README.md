@@ -78,6 +78,7 @@ The server will start on `http://localhost:5000` by default.
 - **POST** `/api/game/<game_name>/player/<player_id>/planets` - Adds a catalog planet to the player's inventory.
 - **PATCH** `/api/game/<game_name>/player/<player_id>/planets/<planet_key>` - Updates whether a planet is exhausted (card flipped).
 - **DELETE** `/api/game/<game_name>/player/<player_id>/planets/<planet_key>` - Removes a planet from the player's inventory.
+- Legendary planets automatically grant their `legendaryAbility` action card when added and revoke that action if the planet leaves the player's inventory.
 
 ### Technology
 - **GET** `/api/technology/catalog` - Returns the base technology catalog with faction metadata.

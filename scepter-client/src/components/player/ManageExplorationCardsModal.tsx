@@ -1,13 +1,25 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { ExplorationCardDefinition, ExplorationSubtype, PlayerExplorationCard } from '../../types/exploration'
+import type { ExplorationCardDefinition, ExplorationSubtype, ExplorationType, PlayerExplorationCard } from '../../types/exploration'
 import { resolveAssetPath } from '../../utils/assets'
 import '../../styles/ManageExplorationCardsModal.css'
 
-const SUBTYPE_LABELS: Record<ExplorationSubtype, string> = {
-  action: 'Exploration Actions',
-  relic_fragment: 'Relic Fragments',
-  relic: 'Relics',
-  attach: 'Attachments'
+type ModalSubtype = ExplorationSubtype | 'relic'
+
+const TYPE_LABELS: Record<string, string> = {
+  Cultural: 'Cultural',
+  Industrial: 'Industrial',
+  Hazardous: 'Hazardous',
+  Frontier: 'Frontier',
+  Relic: 'Relics'
+}
+
+const DEFAULT_TYPE_ORDER: ExplorationType[] = ['Cultural', 'Industrial', 'Hazardous', 'Frontier', 'Relic']
+
+function matchesSubtype(card: ExplorationCardDefinition | PlayerExplorationCard, subtype: ModalSubtype): boolean {
+  if (subtype === 'relic') {
+    return card.type === 'Relic'
+  }
+  return card.subtype === subtype
 }
 
 function normaliseSearch(value: string): string {
@@ -23,7 +35,7 @@ type ManageExplorationCardsModalProps = {
   onAdd: (card: ExplorationCardDefinition) => void
   onRemove: (card: PlayerExplorationCard) => void
   busyKey?: string | null
-  subtypes?: ExplorationSubtype[]
+  subtypes?: ModalSubtype[]
 }
 
 function ManageExplorationCardsModal({
@@ -46,15 +58,17 @@ function ManageExplorationCardsModal({
   }, [isOpen])
 
   const visibleSubtypes = useMemo(() => {
-    const allowed = subtypes?.length ? subtypes : ['action', 'relic_fragment', 'relic']
-    return new Set<ExplorationSubtype>(allowed as ExplorationSubtype[])
+    const allowed = subtypes?.length ? subtypes : ['action', 'relic_fragment', 'attach']
+    return new Set<ModalSubtype>(allowed as ModalSubtype[])
   }, [subtypes])
 
   const search = normaliseSearch(searchTerm)
 
+  const subtypeFilters = useMemo(() => Array.from(visibleSubtypes), [visibleSubtypes])
+
   const filteredOwned = useMemo(() => {
     return owned.filter((card) => {
-      if (!visibleSubtypes.has(card.subtype)) {
+      if (!subtypeFilters.some((subtype) => matchesSubtype(card, subtype))) {
         return false
       }
       if (!search) {
@@ -63,11 +77,11 @@ function ManageExplorationCardsModal({
       const haystack = `${card.name} ${card.type} ${card.subtype}`.toLowerCase()
       return haystack.includes(search)
     })
-  }, [owned, visibleSubtypes, search])
+  }, [owned, subtypeFilters, search])
 
   const filteredAvailable = useMemo(() => {
     return available.filter((card) => {
-      if (!visibleSubtypes.has(card.subtype)) {
+      if (!subtypeFilters.some((subtype) => matchesSubtype(card, subtype))) {
         return false
       }
       if (!search) {
@@ -76,11 +90,23 @@ function ManageExplorationCardsModal({
       const haystack = `${card.name} ${card.type} ${card.subtype}`.toLowerCase()
       return haystack.includes(search)
     })
-  }, [available, visibleSubtypes, search])
+  }, [available, subtypeFilters, search])
 
-  const subtypeOrdering = useMemo(() => {
-    return ['action', 'relic_fragment', 'relic'].filter((key) => visibleSubtypes.has(key as ExplorationSubtype)) as ExplorationSubtype[]
-  }, [visibleSubtypes])
+  const typeOrdering = useMemo(() => {
+    const typeSet = new Set<ExplorationType>()
+    filteredOwned.forEach((card) => {
+      typeSet.add(card.type)
+    })
+    filteredAvailable.forEach((card) => {
+      typeSet.add(card.type)
+    })
+
+    const ordered = DEFAULT_TYPE_ORDER.filter((type) => typeSet.has(type))
+    const fallback = Array.from(typeSet).filter((type) => !DEFAULT_TYPE_ORDER.includes(type))
+    fallback.sort((a, b) => a.localeCompare(b))
+
+    return [...ordered, ...fallback]
+  }, [filteredOwned, filteredAvailable])
 
   if (!isOpen) {
     return null
@@ -104,18 +130,18 @@ function ManageExplorationCardsModal({
           />
         </div>
         <div className="manage-exploration-content">
-          {subtypeOrdering.map((subtype) => {
-            const ownedGroup = filteredOwned.filter((card) => card.subtype === subtype)
-            const availableGroup = filteredAvailable.filter((card) => card.subtype === subtype)
+          {typeOrdering.map((type) => {
+            const ownedGroup = filteredOwned.filter((card) => card.type === type)
+            const availableGroup = filteredAvailable.filter((card) => card.type === type)
 
             if (ownedGroup.length === 0 && availableGroup.length === 0) {
               return null
             }
 
             return (
-              <section key={subtype} className="manage-exploration-section">
+              <section key={type} className="manage-exploration-section">
                 <div className="manage-exploration-section-header">
-                  <h3>{SUBTYPE_LABELS[subtype] ?? subtype}</h3>
+                  <h3>{TYPE_LABELS[type] ?? type}</h3>
                 </div>
                 <div className="manage-exploration-columns">
                   <div className="manage-exploration-column">

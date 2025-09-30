@@ -13,6 +13,7 @@ export interface PlanetDefinition {
   legendary: boolean
   assetFront: string
   assetBack: string
+  legendaryAbility: string | null
 }
 
 export interface PlayerPlanet extends PlanetDefinition {

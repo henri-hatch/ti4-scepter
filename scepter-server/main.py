@@ -512,12 +512,18 @@ def get_player_exploration_definitions_endpoint(game_name, player_id):
         subtypes = ['action', 'relic_fragment']
 
     planet_key = request.args.get('planetKey')
+    types_param = request.args.get('types', '')
+    if types_param:
+        type_filters = [item.strip() for item in types_param.split(',') if item.strip()]
+    else:
+        type_filters = None
     response, status = list_player_exploration_definitions(
         game_name,
         player_id,
         subtypes,
         GAMES_DIR,
-        planet_key=planet_key
+        planet_key=planet_key,
+        types=type_filters
     )
     return jsonify(response), status
 

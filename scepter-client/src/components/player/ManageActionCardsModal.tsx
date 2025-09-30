@@ -39,16 +39,21 @@ function ManageActionCardsModal({
       if (!search) {
         return true
       }
-      return card.name.toLowerCase().includes(search)
+      const haystack = `${card.name} ${card.type}`.toLowerCase()
+      return haystack.includes(search)
     })
   }, [owned, search])
 
   const filteredAvailable = useMemo(() => {
     return available.filter((card) => {
+      if (card.type === 'legendary') {
+        return false
+      }
       if (!search) {
         return true
       }
-      return card.name.toLowerCase().includes(search)
+      const haystack = `${card.name} ${card.type}`.toLowerCase()
+      return haystack.includes(search)
     })
   }, [available, search])
 
@@ -98,6 +103,9 @@ function ManageActionCardsModal({
                           <img src={preview} alt={`${card.name} preview`} />
                           <div className="manage-exploration-card-meta">
                             <div className="manage-exploration-card-name">{card.name}</div>
+                            {card.type === 'legendary' ? (
+                              <div className="manage-exploration-card-type">Legendary</div>
+                            ) : null}
                             <div className="manage-exploration-card-hint">Tap to remove</div>
                           </div>
                         </button>
@@ -128,6 +136,9 @@ function ManageActionCardsModal({
                           <img src={preview} alt={`${card.name} preview`} />
                           <div className="manage-exploration-card-meta">
                             <div className="manage-exploration-card-name">{card.name}</div>
+                            {card.type === 'legendary' ? (
+                              <div className="manage-exploration-card-type">Legendary</div>
+                            ) : null}
                             <div className="manage-exploration-card-hint">Tap to add</div>
                           </div>
                         </button>

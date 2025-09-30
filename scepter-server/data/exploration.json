@@ -74,7 +74,7 @@
       "key": "lazax_survivors",
       "name": "Lazax Survivors",
       "type": "Hazardous",
-      "subtype": "action",
+      "subtype": "attach",
       "asset": "exploration/lazax_survivors.jpg"
     },
     {
@@ -88,91 +88,91 @@
       "key": "dominus_orb",
       "name": "Dominus Orb",
       "type": "Relic",
-      "subtype": "relic",
+      "subtype": "action",
       "asset": "relic/dominus_orb.jpg"
     },
     {
       "key": "dynamis_core",
       "name": "Dynamis Core",
       "type": "Relic",
-      "subtype": "relic",
+      "subtype": "action",
       "asset": "relic/dynamis_core.jpg"
     },
     {
       "key": "jrxs4550",
       "name": "Jr-XS4550",
       "type": "Relic",
-      "subtype": "relic",
+      "subtype": "action",
       "asset": "relic/jrxs4550.jpg"
     },
     {
       "key": "maw_of_worlds",
       "name": "Maw of Worlds",
       "type": "Relic",
-      "subtype": "relic",
+      "subtype": "action",
       "asset": "relic/maw_of_worlds.jpg"
     },
     {
       "key": "nanoforge",
       "name": "Nanoforge",
       "type": "Relic",
-      "subtype": "relic",
+      "subtype": "attach",
       "asset": "relic/nanoforge.jpg"
     },
     {
       "key": "scepter_of_emelpar",
       "name": "Scepter of Emelpar",
       "type": "Relic",
-      "subtype": "relic",
+      "subtype": "action",
       "asset": "relic/scepter_of_emelpar.jpg"
     },
     {
       "key": "shard_of_the_throne",
       "name": "Shard of the Throne",
       "type": "Relic",
-      "subtype": "relic",
+      "subtype": "action",
       "asset": "relic/shard_of_the_throne.jpg"
     },
     {
       "key": "stellar_converter",
       "name": "Stellar Converter",
       "type": "Relic",
-      "subtype": "relic",
+      "subtype": "action",
       "asset": "relic/stellar_converter.jpg"
     },
     {
       "key": "the_codex",
       "name": "The Codex",
       "type": "Relic",
-      "subtype": "relic",
+      "subtype": "action",
       "asset": "relic/the_codex.jpg"
     },
     {
       "key": "the_crown_of_emphidia",
       "name": "The Crown of Emphidia",
       "type": "Relic",
-      "subtype": "relic",
+      "subtype": "action",
       "asset": "relic/the_crown_of_emphidia.jpg"
     },
     {
       "key": "the_crown_of_thalnos",
       "name": "The Crown of Thalnos",
       "type": "Relic",
-      "subtype": "relic",
+      "subtype": "action",
       "asset": "relic/the_crown_of_thalnos.jpg"
     },
     {
       "key": "the_obsidian",
       "name": "The Obsidian",
       "type": "Relic",
-      "subtype": "relic",
+      "subtype": "action",
       "asset": "relic/the_obsidian.jpg"
     },
     {
       "key": "the_prophets_tears",
       "name": "The Prophet's Tears",
       "type": "Relic",
-      "subtype": "relic",
+      "subtype": "action",
       "asset": "relic/the_prophets_tears.jpg"
     }
   ]

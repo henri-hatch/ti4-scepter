@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useSocket } from '../contexts/useSocket'
 import type { JoinedGamePayload, SocketErrorPayload } from '../contexts/socketTypes'
 import '../styles/JoinGameModal.css'
+import { formatIdentifier } from '../utils/technology'
 
 interface ActiveGame {
   name: string
@@ -181,14 +182,8 @@ function JoinGameModal({ isOpen, onClose }: JoinGameModalProps) {
   }
 
   const formatFactionName = (factionKey: string) => {
-    if (!factionKey || factionKey === 'none') {
-      return 'Faction: Unassigned'
-    }
-    const label = factionKey
-      .split('_')
-      .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-      .join(' ')
-    return `Faction: ${label}`
+    const label = formatIdentifier(factionKey)
+    return label ? `Player Faction: ${label}` : 'Player Faction: Unassigned'
   }
 
   if (!isOpen) return null

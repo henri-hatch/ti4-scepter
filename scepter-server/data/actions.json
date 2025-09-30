@@ -3,27 +3,39 @@
     {
       "key": "ancient_burial_sites",
       "name": "Ancient Burial Sites",
+      "type": "standard",
       "asset": "actions/ancient_burial_sites.jpg"
     },
     {
       "key": "blitz",
       "name": "Blitz",
+      "type": "standard",
       "asset": "actions/blitz.jpg"
     },
     {
       "key": "bribery",
       "name": "Bribery",
+      "type": "standard",
       "asset": "actions/bribery.jpg"
     },
     {
       "key": "counterstroke",
       "name": "Counterstroke",
+      "type": "standard",
       "asset": "actions/counterstroke.jpg"
     },
     {
       "key": "deadly_plot",
       "name": "Deadly Plot",
+      "type": "standard",
       "asset": "actions/deadly_plot.jpg"
+    },
+    {
+      "key": "imperial_arms_vault",
+      "name": "Imperial Arms Vault",
+      "type": "legendary",
+      "asset": "actions/legendary_actions/imperial_arms_vault.face.jpg",
+      "backAsset": "actions/legendary_actions/imperial_arms_vault.back.jpg"
     }
   ]
 }

@@ -4,6 +4,7 @@ import { useSocket } from '../contexts/useSocket'
 import type { HostingStartedPayload, PlayerEventPayload, SocketErrorPayload } from '../contexts/socketTypes'
 import type { ObjectiveType } from '../types/objectives'
 import { resolveAssetPath } from '../utils/assets'
+import { formatFactionLabel } from '../utils/technology'
 import '../styles/HostView.css'
 
 type Player = HostingStartedPayload['players'][number]
@@ -440,10 +441,8 @@ function HostView() {
   }
 
   const formatFaction = (value?: string) => {
-    if (!value || value === 'none') {
-      return 'No faction selected'
-    }
-    return value.replace(/_/g, ' ')
+    const label = formatFactionLabel(value ?? null)
+    return label ? `Player Faction: ${label}` : 'Player Faction: Unassigned'
   }
 
   const renderObjectiveRow = (type: 'public_tier1' | 'public_tier2') => {
