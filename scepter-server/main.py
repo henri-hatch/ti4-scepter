@@ -4,7 +4,15 @@ import sys
 from flask import Flask, send_from_directory, request, jsonify
 from flask_socketio import SocketIO, emit, join_room, leave_room, disconnect
 
-from routes.games import create_game_file, list_games, get_player_profile, update_player_faction, update_player_economy
+from routes.games import (
+    create_game_file,
+    list_games,
+    get_player_profile,
+    update_player_faction,
+    update_player_economy,
+    get_game_settings,
+    update_game_victory_point_limit
+)
 from routes.planets import (
     list_catalog_planets,
     list_player_planets,
@@ -280,6 +288,33 @@ def get_active_games():
         logger.error(f"Error getting active games: {e}", exc_info=True)
         return jsonify({"error": "Failed to get active games"}), 500
 
+
+@app.route('/api/game/<game_name>/settings', methods=['GET'])
+def get_game_settings_route(game_name):
+    """API endpoint to retrieve configurable game settings."""
+    response, status = get_game_settings(game_name, GAMES_DIR)
+    return jsonify(response), status
+
+
+@app.route('/api/game/<game_name>/settings', methods=['PATCH'])
+def update_game_settings_route(game_name):
+    """API endpoint to update configurable game settings."""
+    data = request.get_json(silent=True) or {}
+    response, status = update_game_victory_point_limit(
+        game_name,
+        data.get('victoryPointLimit'),
+        GAMES_DIR
+    )
+
+    if status == 200 and isinstance(response, dict):
+        payload = {
+            'gameName': game_name,
+            'victoryPointLimit': response.get('victoryPointLimit', 10)
+        }
+        socketio.emit('game_settings_updated', payload, room=game_name)
+
+    return jsonify(response), status
+
 @app.route('/api/game/<game_name>/players', methods=['GET'])
 def get_game_players(game_name):
     """API endpoint to get players for a specific game"""
@@ -318,6 +353,12 @@ def patch_player_economy(game_name, player_id):
         data.get('commodities'),
         GAMES_DIR
     )
+    if status == 200 and isinstance(response, dict) and 'player' in response:
+        payload = {
+            'gameName': game_name,
+            'player': response['player']
+        }
+        socketio.emit('player_economy_updated', payload, room=game_name)
     return jsonify(response), status
 
 
@@ -884,12 +925,18 @@ def handle_host_game(data):
             
             # Get players for this game
             players = session_manager.get_game_players(game_name)
+            settings_response, settings_status = get_game_settings(game_name, GAMES_DIR)
+            if settings_status != 200 or not isinstance(settings_response, dict):
+                victory_point_limit = 10
+            else:
+                victory_point_limit = settings_response.get('victoryPointLimit', 10)
             
             # Notify the host that hosting started
             emit('hosting_started', {
                 'gameName': game_name,
                 'localIp': session_manager.get_local_ip(),
-                'players': players
+                'players': players,
+                'victoryPointLimit': victory_point_limit
             })
             
             logger.info(f"Successfully started hosting '{game_name}' with {len(players)} players")

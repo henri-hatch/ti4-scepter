@@ -158,7 +158,8 @@ def create_game_file(game_name: str, players: List[Dict], games_dir: str = 'game
                 id INTEGER PRIMARY KEY,
                 name TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                victory_point_limit INTEGER DEFAULT 10
             );
         '''
         
@@ -171,9 +172,9 @@ def create_game_file(game_name: str, players: List[Dict], games_dir: str = 'game
         # Insert game metadata
         current_time = datetime.datetime.now().isoformat()
         execute_query(
-            db_path, 
-            "INSERT INTO game_metadata (name, created_at, last_updated) VALUES (?, ?, ?)", 
-            (game_name, current_time, current_time)
+            db_path,
+            "INSERT INTO game_metadata (name, created_at, last_updated, victory_point_limit) VALUES (?, ?, ?, ?)",
+            (game_name, current_time, current_time, 10)
         )
         
         # Insert players
@@ -321,10 +322,11 @@ def get_game_metadata(db_path: str) -> Dict[str, Any]:
     try:
         if not table_exists(db_path, 'game_metadata'):
             return None
-            
+        ensure_metadata_victory_limit_column(db_path)
+
         return execute_query(
-            db_path, 
-            "SELECT name, created_at, last_updated FROM game_metadata WHERE id = 1", 
+            db_path,
+            "SELECT name, created_at, last_updated, victory_point_limit FROM game_metadata WHERE id = 1",
             fetch_one=True
         )
     except DatabaseError:
@@ -353,6 +355,73 @@ def get_player_count(db_path: str) -> int:
     except DatabaseError:
         return 0
 
+
+def get_game_settings(game_name: str, games_dir: str = 'games') -> Tuple[Dict[str, Any], int]:
+    """Return configurable game settings such as the victory point limit."""
+    db_path = get_game_db_path(game_name, games_dir)
+    if not os.path.exists(db_path):
+        logger.warning("Requested settings for non-existent game '%s'", game_name)
+        return {"error": "Game not found"}, 404
+
+    ensure_metadata_victory_limit_column(db_path)
+
+    try:
+        row = execute_query(
+            db_path,
+            "SELECT victory_point_limit FROM game_metadata WHERE id = 1",
+            fetch_one=True
+        )
+    except DatabaseError as exc:
+        logger.error("Failed to fetch settings for '%s': %s", game_name, exc)
+        return {"error": "Unable to load game settings"}, 500
+
+    raw_limit = row.get('victory_point_limit') if row else None
+    try:
+        parsed_limit = int(raw_limit)
+    except (TypeError, ValueError):
+        parsed_limit = 10
+
+    if parsed_limit not in (10, 14):
+        parsed_limit = 10
+
+    return {"victoryPointLimit": parsed_limit}, 200
+
+
+def update_game_victory_point_limit(
+    game_name: str,
+    victory_limit_raw: Any,
+    games_dir: str = 'games'
+) -> Tuple[Dict[str, Any], int]:
+    """Persist a new victory point limit for the specified game."""
+    db_path = get_game_db_path(game_name, games_dir)
+    if not os.path.exists(db_path):
+        logger.warning("Attempted to update settings for non-existent game '%s'", game_name)
+        return {"error": "Game not found"}, 404
+
+    ensure_metadata_victory_limit_column(db_path)
+
+    try:
+        parsed_limit = int(victory_limit_raw)
+    except (TypeError, ValueError):
+        return {"error": "victoryPointLimit must be a number"}, 400
+
+    if parsed_limit not in (10, 14):
+        return {"error": "victoryPointLimit must be either 10 or 14"}, 400
+
+    try:
+        execute_query(
+            db_path,
+            "UPDATE game_metadata SET victory_point_limit = ? WHERE id = 1",
+            (parsed_limit,)
+        )
+    except DatabaseError as exc:
+        logger.error("Failed to update victory point limit for '%s': %s", game_name, exc)
+        return {"error": "Unable to update game settings"}, 500
+
+    update_game_timestamp(db_path)
+
+    return {"victoryPointLimit": parsed_limit}, 200
+
 def update_game_timestamp(db_path: str) -> bool:
     """
     Update the last_updated timestamp for a game
@@ -379,6 +448,39 @@ def get_game_db_path(game_name: str, games_dir: str = 'games') -> str:
     """Return the expected database path for a game name."""
     safe_game_name = "".join(c for c in game_name if c.isalnum() or c in (' ', '-', '_')).strip()
     return os.path.join(games_dir, f"{safe_game_name}.sqlite3")
+
+
+def ensure_metadata_victory_limit_column(db_path: str) -> None:
+    """Ensure the game_metadata table exposes the victory point limit column."""
+    try:
+        columns = execute_query(
+            db_path,
+            "PRAGMA table_info(game_metadata)",
+            fetch_all=True
+        ) or []
+    except DatabaseError as exc:
+        logger.error("Failed to inspect game_metadata for '%s': %s", db_path, exc)
+        return
+
+    has_column = any(str(column.get('name')) == 'victory_point_limit' for column in columns)
+    if not has_column:
+        try:
+            execute_query(
+                db_path,
+                "ALTER TABLE game_metadata ADD COLUMN victory_point_limit INTEGER DEFAULT 10"
+            )
+        except DatabaseError as exc:
+            logger.error("Failed to add victory_point_limit column for '%s': %s", db_path, exc)
+            return
+
+    try:
+        execute_query(
+            db_path,
+            "UPDATE game_metadata SET victory_point_limit = 10 WHERE victory_point_limit IS NULL",
+            fetch_all=False
+        )
+    except DatabaseError as exc:
+        logger.error("Failed to backfill victory_point_limit for '%s': %s", db_path, exc)
 
 
 def get_player_profile(game_name: str, player_id: str, games_dir: str = 'games') -> Tuple[Dict[str, Any], int]:

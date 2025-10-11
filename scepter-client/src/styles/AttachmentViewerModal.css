@@ -37,7 +37,7 @@
 
 .attachment-viewer-card {
   width: min(280px, 70vw);
-  aspect-ratio: 63 / 88;
+  aspect-ratio: 2 / 3;
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 20px 45px rgba(2, 6, 23, 0.65);

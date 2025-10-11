@@ -10,12 +10,18 @@ export interface PlayerSummary {
   playerId: string
   name: string
   faction?: string
+  victoryPoints?: number
+  tradeGoods?: number
+  commodities?: number
+  resources?: number
+  influence?: number
 }
 
 export interface HostingStartedPayload {
   gameName: string
   localIp: string
   players: PlayerSummary[]
+  victoryPointLimit?: number
 }
 
 export interface PlayerEventPayload {

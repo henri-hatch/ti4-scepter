@@ -52,7 +52,7 @@
 
 .planet-card-attachment {
   width: 70px;
-  aspect-ratio: 63 / 88;
+  aspect-ratio: 2 / 3;
   border-radius: 10px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.16);

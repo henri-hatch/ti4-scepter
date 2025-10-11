@@ -1,13 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useSocket } from '../contexts/useSocket'
-import type { HostingStartedPayload, PlayerEventPayload, SocketErrorPayload } from '../contexts/socketTypes'
+import type { HostingStartedPayload, PlayerEventPayload, PlayerSummary, SocketErrorPayload } from '../contexts/socketTypes'
 import type { ObjectiveType } from '../types/objectives'
 import { resolveAssetPath } from '../utils/assets'
 import { formatFactionLabel } from '../utils/technology'
+import HostVictoryTrack, { type VictoryLimit, type VictoryTrackPlayer } from './HostVictoryTrack'
 import '../styles/HostView.css'
 
-type Player = HostingStartedPayload['players'][number]
+interface HostPlayer extends VictoryTrackPlayer {
+  tradeGoods: number
+  commodities: number
+  resources: number
+  influence: number
+}
 
 interface LogEntry {
   id: string
@@ -83,6 +89,22 @@ const OBJECTIVE_PLACEHOLDERS: Record<'public_tier1' | 'public_tier2', string> = 
   public_tier2: resolveAssetPath('objectives/tier2.back.jpg')
 }
 
+const DEFAULT_VICTORY_LIMIT: VictoryLimit = 10
+
+const toNumber = (value: unknown): number => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const ensureFactionKey = (value?: string | null): string => {
+  if (!value) {
+    return 'none'
+  }
+  return value.toLowerCase()
+}
+
+const normaliseVictoryLimit = (value: unknown): VictoryLimit => (toNumber(value) === 14 ? 14 : 10)
+
 const getFactionTokenAsset = (faction?: string | null): string | null => {
   if (!faction || faction === 'none') {
     return null
@@ -96,7 +118,11 @@ function HostView() {
   const { socket, isConnected, connectionType, initializeSocket, hostGame, stopHosting } = useSocket()
   const [gameName, setGameName] = useState<string>('')
   const [localIp, setLocalIp] = useState<string>('')
-  const [players, setPlayers] = useState<Player[]>([])
+  const [players, setPlayers] = useState<HostPlayer[]>([])
+  const [victoryPointLimit, setVictoryPointLimit] = useState<VictoryLimit>(DEFAULT_VICTORY_LIMIT)
+  const [settingsLoading, setSettingsLoading] = useState(false)
+  const [settingsSaving, setSettingsSaving] = useState(false)
+  const [settingsError, setSettingsError] = useState<string | null>(null)
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [isConnecting, setIsConnecting] = useState(true)
   const [publicObjectives, setPublicObjectives] = useState<ObjectiveBoard>(() => createEmptyBoard())
@@ -129,6 +155,103 @@ function HostView() {
       return [logEntry, ...prev].slice(0, 50) // Keep last 50 logs
     })
   }, [])
+
+  const normalisePlayerSummary = useCallback((summary: PlayerSummary): HostPlayer => ({
+    playerId: summary.playerId,
+    name: summary.name,
+    faction: ensureFactionKey(summary.faction),
+    victoryPoints: toNumber(summary.victoryPoints),
+    tradeGoods: toNumber(summary.tradeGoods),
+    commodities: toNumber(summary.commodities),
+    resources: toNumber(summary.resources),
+    influence: toNumber(summary.influence)
+  }), [])
+
+  const refreshPlayers = useCallback(async (name?: string) => {
+    const targetGame = name ?? gameName
+    if (!targetGame) {
+      setPlayers([])
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/game/${encodeURIComponent(targetGame)}/players`)
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload.error || 'Failed to load players')
+      }
+      const entries = Array.isArray(payload.players) ? (payload.players as PlayerSummary[]) : []
+      setPlayers(entries.map(normalisePlayerSummary))
+    } catch (error) {
+      console.error('Failed to load players list', error)
+    }
+  }, [gameName, normalisePlayerSummary])
+
+  const refreshVictoryLimit = useCallback(async (name?: string) => {
+    const targetGame = name ?? gameName
+    if (!targetGame) {
+      setVictoryPointLimit(DEFAULT_VICTORY_LIMIT)
+      setSettingsLoading(false)
+      return
+    }
+
+    setSettingsLoading(true)
+    setSettingsError(null)
+    try {
+      const response = await fetch(`/api/game/${encodeURIComponent(targetGame)}/settings`)
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload.error || 'Failed to load game settings')
+      }
+      setVictoryPointLimit(normaliseVictoryLimit(payload.victoryPointLimit))
+    } catch (error) {
+      console.error('Failed to load victory point limit', error)
+      setSettingsError('Unable to load victory point limit.')
+    } finally {
+      setSettingsLoading(false)
+    }
+  }, [gameName])
+
+  const updateVictoryLimit = useCallback(async (nextLimit: VictoryLimit) => {
+    if (!gameName) {
+      setVictoryPointLimit(nextLimit)
+      return
+    }
+
+    setSettingsSaving(true)
+    setSettingsError(null)
+    try {
+      const response = await fetch(`/api/game/${encodeURIComponent(gameName)}/settings`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ victoryPointLimit: nextLimit })
+      })
+
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload.error || 'Failed to update game settings')
+      }
+
+      const validated = normaliseVictoryLimit(payload.victoryPointLimit ?? nextLimit)
+      setVictoryPointLimit(validated)
+      addLog(`Victory point limit updated to ${validated}.`, 'info')
+    } catch (error) {
+      console.error('Failed to update victory point limit', error)
+      addLog('Failed to update victory point limit.', 'error')
+      setSettingsError('Failed to update victory point limit.')
+    } finally {
+      setSettingsSaving(false)
+    }
+  }, [gameName, addLog])
+
+  const handleVictoryLimitChange = useCallback((limit: VictoryLimit) => {
+    if (limit === victoryPointLimit) {
+      return
+    }
+    void updateVictoryLimit(limit)
+  }, [updateVictoryLimit, victoryPointLimit])
 
   const loadPublicObjectives = useCallback(async (name: string) => {
     if (!name) {
@@ -199,21 +322,34 @@ function HostView() {
       const handleHostingStarted = (data: HostingStartedPayload) => {
         setGameName(data.gameName)
         setLocalIp(data.localIp)
-        setPlayers(data.players ?? [])
+        const summaries = Array.isArray(data.players) ? data.players : []
+        setPlayers(summaries.map(normalisePlayerSummary))
+        if (typeof data.victoryPointLimit === 'number') {
+          const limitFromSocket = normaliseVictoryLimit(data.victoryPointLimit)
+          setVictoryPointLimit(limitFromSocket)
+          setSettingsError(null)
+          setSettingsLoading(false)
+        } else {
+          setSettingsError(null)
+          void refreshVictoryLimit(data.gameName)
+        }
         addLog(`Started hosting game "${data.gameName}" on ${data.localIp}`, 'info')
         addLog(`Game has ${data.players?.length || 0} registered players`, 'info')
         setPublicObjectives(createEmptyBoard())
         void loadPublicObjectives(data.gameName)
+        void refreshPlayers(data.gameName)
       }
 
       const activeGame = gameName || gameNameFromState || ''
 
       const handlePlayerJoined = (data: PlayerEventPayload) => {
         addLog(`${data.playerName} joined the game`, 'join')
+        void refreshPlayers(activeGame)
       }
 
       const handlePlayerLeft = (data: PlayerEventPayload) => {
         addLog(`${data.playerName} left the game`, 'leave')
+        void refreshPlayers(activeGame)
       }
 
       const handleObjectiveCompleted = (data: ObjectiveCompletedPayload) => {
@@ -232,6 +368,19 @@ function HostView() {
         }
 
         addLog(messageParts.join(' '), 'info')
+
+        if (totalValue !== null && data.playerId) {
+          const nextTotal = toNumber(totalValue)
+          setPlayers((previous) =>
+            previous.map((player) =>
+              player.playerId === data.playerId
+                ? { ...player, victoryPoints: nextTotal }
+                : player
+            )
+          )
+        } else if (data.playerId && activeGame) {
+          void refreshPlayers(activeGame)
+        }
       }
 
       const handlePublicObjectiveAdded = (payload: SocketPublicObjectivePayload) => {
@@ -291,69 +440,132 @@ function HostView() {
 
       const handleObjectiveScoringState = (payload: {
         gameName?: string
-        objectiveType?: ObjectiveType
+        objectiveType?: ObjectiveType | 'secret'
         slotIndex?: number
         playerId?: string
         playerName?: string
         playerFaction?: string
         isCompleted?: boolean
+        totalVictoryPoints?: number
       }) => {
         if (!payload || payload.gameName !== activeGame) {
           return
         }
 
         const type = payload.objectiveType
+        const isPublicObjective = type === 'public_tier1' || type === 'public_tier2'
         const rawSlot = payload.slotIndex
         const slotIndex = typeof rawSlot === 'number' && Number.isFinite(rawSlot) ? rawSlot : null
-        if ((type !== 'public_tier1' && type !== 'public_tier2') || slotIndex === null || slotIndex < 0 || slotIndex >= OBJECTIVE_SLOT_COUNT) {
-          return
-        }
 
         const playerId = payload.playerId
         if (!playerId) {
           return
         }
 
-        let shouldReload = false
-        setPublicObjectives((previous) => {
-          const currentSlot = previous[type][slotIndex]
-          if (!currentSlot) {
-            shouldReload = true
-            return previous
-          }
+        if (isPublicObjective) {
+          if (slotIndex === null || slotIndex < 0 || slotIndex >= OBJECTIVE_SLOT_COUNT) {
+            void loadPublicObjectives(activeGame)
+          } else {
+            let shouldReload = false
+            setPublicObjectives((previous) => {
+              const currentSlot = previous[type][slotIndex]
+              if (!currentSlot) {
+                shouldReload = true
+                return previous
+              }
 
-          const next: ObjectiveBoard = {
-            public_tier1: [...previous.public_tier1],
-            public_tier2: [...previous.public_tier2]
-          }
-          const updatedSlot: PublicObjectiveSlot = {
-            ...currentSlot,
-            scoredBy: [...currentSlot.scoredBy]
-          }
+              const next: ObjectiveBoard = {
+                public_tier1: [...previous.public_tier1],
+                public_tier2: [...previous.public_tier2]
+              }
+              const updatedSlot: PublicObjectiveSlot = {
+                ...currentSlot,
+                scoredBy: [...currentSlot.scoredBy]
+              }
 
-          const existingIndex = updatedSlot.scoredBy.findIndex((entry) => entry.playerId === playerId)
-          if (payload.isCompleted) {
-            const tokenEntry = {
-              playerId,
-              playerName: payload.playerName,
-              faction: payload.playerFaction ?? 'none'
+              const existingIndex = updatedSlot.scoredBy.findIndex((entry) => entry.playerId === playerId)
+              if (payload.isCompleted) {
+                const tokenEntry = {
+                  playerId,
+                  playerName: payload.playerName,
+                  faction: ensureFactionKey(payload.playerFaction)
+                }
+                if (existingIndex >= 0) {
+                  updatedSlot.scoredBy[existingIndex] = tokenEntry
+                } else {
+                  updatedSlot.scoredBy.push(tokenEntry)
+                }
+              } else if (existingIndex >= 0) {
+                updatedSlot.scoredBy.splice(existingIndex, 1)
+              }
+
+              next[type][slotIndex] = updatedSlot
+              return next
+            })
+
+            if (shouldReload && activeGame) {
+              void loadPublicObjectives(activeGame)
             }
-            if (existingIndex >= 0) {
-              updatedSlot.scoredBy[existingIndex] = tokenEntry
-            } else {
-              updatedSlot.scoredBy.push(tokenEntry)
-            }
-          } else if (existingIndex >= 0) {
-            updatedSlot.scoredBy.splice(existingIndex, 1)
           }
-
-          next[type][slotIndex] = updatedSlot
-          return next
-        })
-
-        if (shouldReload && activeGame) {
-          void loadPublicObjectives(activeGame)
         }
+
+        if (typeof payload.totalVictoryPoints === 'number') {
+          const nextTotal = toNumber(payload.totalVictoryPoints)
+          setPlayers((previous) =>
+            previous.map((player) =>
+              player.playerId === playerId
+                ? { ...player, victoryPoints: nextTotal }
+                : player
+            )
+          )
+        } else if (activeGame) {
+          void refreshPlayers(activeGame)
+        }
+      }
+
+      const handlePlayerEconomyUpdated = (payload: {
+        gameName?: string
+        player?: {
+          playerId?: string
+          tradeGoods?: number
+          commodities?: number
+        }
+      }) => {
+        if (!payload || payload.gameName !== activeGame) {
+          return
+        }
+
+        const playerPayload = payload.player
+        const targetId = playerPayload?.playerId
+        if (!targetId) {
+          void refreshPlayers(activeGame)
+          return
+        }
+
+        const nextTradeGoods = toNumber(playerPayload.tradeGoods)
+        const nextCommodities = toNumber(playerPayload.commodities)
+
+        setPlayers((previous) =>
+          previous.map((player) =>
+            player.playerId === targetId
+              ? {
+                  ...player,
+                  tradeGoods: nextTradeGoods,
+                  commodities: nextCommodities
+                }
+              : player
+          )
+        )
+      }
+
+      const handleGameSettingsUpdated = (payload: { gameName?: string; victoryPointLimit?: number }) => {
+        if (!payload || payload.gameName !== activeGame) {
+          return
+        }
+
+        setVictoryPointLimit(normaliseVictoryLimit(payload.victoryPointLimit))
+        setSettingsError(null)
+        setSettingsLoading(false)
       }
 
       const handleError = (data: SocketErrorPayload) => {
@@ -363,6 +575,10 @@ function HostView() {
       const handleDisconnect = () => {
         setIsConnecting(true)
         setPublicObjectives(createEmptyBoard())
+        setPlayers([])
+        setVictoryPointLimit(DEFAULT_VICTORY_LIMIT)
+        setSettingsLoading(false)
+        setSettingsError(null)
         addLog('Disconnected from server', 'error')
         hasRequestedHostingRef.current = false
       }
@@ -378,6 +594,8 @@ function HostView() {
       socket.on('public_objective_added', handlePublicObjectiveAdded)
       socket.on('public_objective_removed', handlePublicObjectiveRemoved)
       socket.on('objective_scoring_state', handleObjectiveScoringState)
+      socket.on('player_economy_updated', handlePlayerEconomyUpdated)
+      socket.on('game_settings_updated', handleGameSettingsUpdated)
       socket.on('error', handleError)
       socket.on('disconnect', handleDisconnect)
       socket.on('connect_error', handleConnectError)
@@ -397,12 +615,26 @@ function HostView() {
         socket.off('public_objective_added', handlePublicObjectiveAdded)
         socket.off('public_objective_removed', handlePublicObjectiveRemoved)
         socket.off('objective_scoring_state', handleObjectiveScoringState)
+        socket.off('player_economy_updated', handlePlayerEconomyUpdated)
+        socket.off('game_settings_updated', handleGameSettingsUpdated)
         socket.off('error', handleError)
         socket.off('disconnect', handleDisconnect)
         socket.off('connect_error', handleConnectError)
       }
     }
-  }, [socket, connectionType, gameNameFromState, addLog, hostGame, isConnected, gameName, loadPublicObjectives])
+  }, [
+    socket,
+    connectionType,
+    gameNameFromState,
+    addLog,
+    hostGame,
+    isConnected,
+    gameName,
+    loadPublicObjectives,
+    normalisePlayerSummary,
+    refreshPlayers,
+    refreshVictoryLimit
+  ])
 
   useEffect(() => {
     hasRequestedHostingRef.current = false
@@ -421,6 +653,14 @@ function HostView() {
       setPublicObjectives(createEmptyBoard())
     }
   }, [gameName, loadPublicObjectives])
+
+  useEffect(() => {
+    if (!gameName) {
+      setPlayers([])
+      return
+    }
+    void refreshPlayers(gameName)
+  }, [gameName, refreshPlayers])
 
   const handleStopHosting = () => {
     stopHosting()
@@ -533,6 +773,16 @@ function HostView() {
         </div>
 
         <div className="host-dashboard">
+          <HostVictoryTrack
+            players={players}
+            victoryLimit={victoryPointLimit}
+            onLimitChange={handleVictoryLimitChange}
+            resolveTokenAsset={getFactionTokenAsset}
+            isLoading={settingsLoading}
+            isUpdating={settingsSaving}
+            errorMessage={settingsError}
+          />
+
           <div className="objective-board-panel">
             <h3>Public Objectives</h3>
             <div className="objective-board">
@@ -551,8 +801,19 @@ function HostView() {
               ) : (
                 players.map((player) => (
                   <div key={player.playerId} className="player-item">
-                    <div className="player-name">{player.name}</div>
-                    <div className="player-id">{player.playerId}</div>
+                    <div className="player-item-header">
+                      <div className="player-name">
+                        {player.name}
+                        <div className="player-stats">
+                          <span className="player-stat"><span className="player-stat-label">VP</span><span className="player-stat-value">{player.victoryPoints}</span></span>
+                          <span className="player-stat"><span className="player-stat-label">TG</span><span className="player-stat-value">{player.tradeGoods}</span></span>
+                          <span className="player-stat"><span className="player-stat-label">CM</span><span className="player-stat-value">{player.commodities}</span></span>
+                          <span className="player-stat"><span className="player-stat-label">RES</span><span className="player-stat-value">{player.resources}</span></span>
+                          <span className="player-stat"><span className="player-stat-label">INF</span><span className="player-stat-value">{player.influence}</span></span>
+                        </div>
+                      </div>
+                      <div className="player-id">{player.playerId}</div>
+                    </div>
                     <div className={player.faction && player.faction !== 'none' ? 'player-faction-label' : 'player-faction-label none'}>
                       {formatFaction(player.faction)}
                     </div>

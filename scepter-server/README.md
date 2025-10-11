@@ -62,8 +62,11 @@ The server will start on `http://localhost:5000` by default.
 ### Games
 - **POST** `/api/create-game` - Create a new game
 - **GET** `/api/list-games` - List all existing games
+- **GET** `/api/game/<game_name>/settings` - Returns persistent game settings such as the `victoryPointLimit` (defaults to 10).
+- **PATCH** `/api/game/<game_name>/settings` - Updates the `victoryPointLimit` (accepts 10 or 14) and timestamps the game metadata.
 
 ### Players
+- **GET** `/api/game/<game_name>/players` - Lists all players in the game including faction, victory points, trade goods, commodities, resources, and influence totals.
 - **GET** `/api/game/<game_name>/player/<player_id>` - Returns the player's profile including faction and track totals.
 - **PUT** `/api/game/<game_name>/player/<player_id>/faction` - Assign or clear a player's faction, syncing starting technology and home planets automatically.
 - **PATCH** `/api/game/<game_name>/player/<player_id>/economy` - Updates trade goods and commodity totals, clamping negative inputs to zero.
@@ -160,6 +163,7 @@ Each game database contains:
 - `name` - Game name
 - `created_at` - Creation timestamp
 - `last_updated` - Last update timestamp
+- `victory_point_limit` - Victory point goal for the session (10 or 14)
 
 ### `planetDefinitions` table
 - `planetKey` - Catalog key for lookup

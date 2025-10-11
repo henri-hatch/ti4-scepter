@@ -42,16 +42,16 @@ def execute_query(db_path, query, params=None, fetch_one=False, fetch_all=True):
     try:
         with get_db_connection(db_path) as conn:
             cursor = conn.cursor()
-            
+
             if params:
                 cursor.execute(query, params)
             else:
                 cursor.execute(query)
-            
-            # Determine if this is a SELECT query
+
+            # Determine if this is a query returning rows
             query_type = query.strip().upper().split()[0]
-            
-            if query_type == 'SELECT':
+
+            if query_type in ('SELECT', 'PRAGMA'):
                 if fetch_one:
                     result = cursor.fetchone()
                     return dict(result) if result else None

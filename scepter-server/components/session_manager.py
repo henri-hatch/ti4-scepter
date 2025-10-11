@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Set
 from dataclasses import dataclass, asdict
 from datetime import datetime
 
-from routes.games import get_game_metadata, get_player_count
+from routes.games import get_game_metadata, get_player_count, ensure_metadata_victory_limit_column
 from components.database import execute_query
 
 logger = logging.getLogger(__name__)
@@ -71,7 +71,10 @@ class SessionManager:
             if game_name in self.active_sessions:
                 logger.warning(f"Game session '{game_name}' is already active")
                 return False
-            
+
+            # Ensure new schema elements exist for legacy databases
+            ensure_metadata_victory_limit_column(db_path)
+
             # Create new session
             now = datetime.now()
             session = GameSession(
@@ -190,14 +193,32 @@ class SessionManager:
                 """
                     SELECT playerId,
                            name,
-                           COALESCE(faction, 'none') AS faction
+                           COALESCE(faction, 'none') AS faction,
+                           COALESCE(victoryPoints, 0) AS victoryPoints,
+                           COALESCE(trade_goods, 0) AS tradeGoods,
+                           COALESCE(commodities, 0) AS commodities,
+                           COALESCE(resources, 0) AS resources,
+                           COALESCE(influence, 0) AS influence
                     FROM players
                     ORDER BY name
                 """,
                 fetch_all=True
-            )
-            
-            return players or []
+            ) or []
+
+            normalised: List[Dict] = []
+            for row in players:
+                normalised.append({
+                    'playerId': row.get('playerId'),
+                    'name': row.get('name'),
+                    'faction': str(row.get('faction') or 'none').lower(),
+                    'victoryPoints': int(row.get('victoryPoints') or 0),
+                    'tradeGoods': int(row.get('tradeGoods') or 0),
+                    'commodities': int(row.get('commodities') or 0),
+                    'resources': int(row.get('resources') or 0),
+                    'influence': int(row.get('influence') or 0)
+                })
+
+            return normalised
             
         except Exception as e:
             logger.error(f"Error getting players for game '{game_name}': {e}")
